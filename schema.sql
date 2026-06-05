@@ -51,6 +51,19 @@ CREATE TABLE monitorings (
 CREATE UNIQUE INDEX uq_sensor_zone ON monitorings (sensor_id, zone_id);
 
 -- =============================================================
+-- Tabla: readings
+-- =============================================================
+CREATE TABLE readings (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  monitoring_id UUID NOT NULL REFERENCES monitorings(id) ON DELETE CASCADE,
+  value         NUMERIC(10,2) NOT NULL,
+  recorded_at   TIMESTAMP NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_readings_monitoring_recorded
+  ON readings(monitoring_id, recorded_at DESC);
+
+-- =============================================================
 -- Datos de prueba
 -- =============================================================
 

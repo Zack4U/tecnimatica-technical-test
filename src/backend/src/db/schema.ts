@@ -8,6 +8,7 @@ import {
   timestamp,
   numeric,
   uniqueIndex,
+  index,
 } from 'drizzle-orm/pg-core';
 
 export const sensorTypeEnum = pgEnum('sensor_type', [
@@ -71,5 +72,24 @@ export const monitorings = pgTable(
   },
   (table) => [
     uniqueIndex('uq_sensor_zone').on(table.sensorId, table.zoneId),
+  ]
+);
+
+export const readings = pgTable(
+  'readings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    monitoringId: uuid('monitoring_id')
+      .notNull()
+      .references(() => monitorings.id, { onDelete: 'cascade' }),
+    value: numeric('value', { precision: 10, scale: 2 }).notNull(),
+    recordedAt: timestamp('recorded_at').defaultNow().notNull(),
+  },
+  // Índice para consultas por monitoring ordenadas por tiempo
+  (table) => [
+    index('idx_readings_monitoring_recorded').on(
+      table.monitoringId,
+      table.recordedAt
+    ),
   ]
 );
