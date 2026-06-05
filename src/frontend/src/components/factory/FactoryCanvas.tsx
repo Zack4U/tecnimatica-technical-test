@@ -13,6 +13,7 @@ type Props = {
   zonePaths: Map<string, string>;
   zoneBoundsMap: Map<string, ZoneBounds>;
   sensorInstances: SensorInstance[];
+  recentlyUpdated: Set<string>;
   activeFilters: Set<FilterType>;
   selectedZoneId: string | null;
   selectedSensorId: string | null;
@@ -50,6 +51,7 @@ export function FactoryCanvas({
   zonePaths,
   zoneBoundsMap,
   sensorInstances,
+  recentlyUpdated,
   activeFilters,
   selectedZoneId,
   selectedSensorId,
@@ -178,6 +180,7 @@ export function FactoryCanvas({
             cy={inst.cy}
             isSelected={selectedSensorId === sensor.id}
             isVisible={visible}
+            justUpdated={inst.monitorings.some((m) => recentlyUpdated.has(m.id))}
             index={globalIndex}
             onClick={() => onSensorClick(sensor.id)}
           />

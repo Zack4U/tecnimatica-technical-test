@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion';
 import type { SensorResponse, SensorType } from '../../types/Sensor.js';
 import type { MonitoringResponse } from '../../types/Monitoring.js';
 
@@ -17,11 +18,12 @@ const TYPE_LABEL: Record<SensorType, string> = {
 
 type Props = {
   sensor: SensorResponse;
-  monitorings: MonitoringResponse[];  // todos los monitoreos de esta instancia
+  monitorings: MonitoringResponse[];
   cx: number;
   cy: number;
   isSelected: boolean;
   isVisible: boolean;
+  justUpdated: boolean;
   index: number;
   onClick: () => void;
 };
@@ -33,6 +35,7 @@ export function SensorMarker({
   cy,
   isSelected,
   isVisible,
+  justUpdated,
   index,
   onClick,
 }: Props) {
@@ -61,11 +64,13 @@ export function SensorMarker({
   const code = `${TYPE_LABEL[sensor.type]}${index + 1}`;
 
   return (
-    <g
+    <motion.g
       style={{ cursor: 'pointer', opacity: isPaused ? 0.5 : 1 }}
       onClick={onClick}
       role="button"
       aria-label={`Sensor: ${sensor.name}`}
+      animate={justUpdated ? { scale: [1, 1.15, 1] } : { scale: 1 }}
+      transition={{ duration: 0.3 }}
     >
       <title>{sensor.name}</title>
 
@@ -121,6 +126,6 @@ export function SensorMarker({
       >
         {code}
       </text>
-    </g>
+    </motion.g>
   );
 }
