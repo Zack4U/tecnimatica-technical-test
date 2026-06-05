@@ -6,6 +6,11 @@ import type {
   CreateMonitoringDto,
   UpdateMonitoringDto,
 } from '../types/Monitoring.js';
+import type {
+  Reading,
+  CreateReadingsBatchDto,
+  BatchReadingsResponse,
+} from '../types/Reading.js';
 
 const BASE = `${import.meta.env.VITE_API_URL}/api/v1`;
 
@@ -68,6 +73,23 @@ export function updateMonitoring(
 ): Promise<MonitoringResponse> {
   return apiFetch(`/monitorings/${id}`, {
     method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export function getReadings(monitoringId: string, limit = 20): Promise<Reading[]> {
+  return apiFetch(`/monitorings/${monitoringId}/readings?limit=${limit}`);
+}
+
+export function getLatestReadings(): Promise<Record<string, Reading>> {
+  return apiFetch('/readings/latest');
+}
+
+export function postReadingsBatch(
+  data: CreateReadingsBatchDto
+): Promise<BatchReadingsResponse> {
+  return apiFetch('/readings/batch', {
+    method: 'POST',
     body: JSON.stringify(data),
   });
 }

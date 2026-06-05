@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
-import { getSensors, getZones, getMonitorings } from '../services/api.js';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { getSensors, getZones, getMonitorings, getLatestReadings } from '../services/api.js';
 import type { SensorResponse, SensorType } from '../types/Sensor.js';
 import type { ZoneResponse } from '../types/Zone.js';
 import type { MonitoringResponse } from '../types/Monitoring.js';
+import type { Reading } from '../types/Reading.js';
 
 export type FilterType = SensorType | 'paused' | 'alert';
 
@@ -293,6 +294,7 @@ export type FactoryState = {
   zonePaths: Map<string, string>;
   zoneBoundsMap: Map<string, ZoneBounds>;
   sensorInstances: SensorInstance[];
+  latestReadings: Record<string, Reading>;
   selectedZoneId: string | null;
   selectedSensorId: string | null;
   activeFilters: Set<FilterType>;
@@ -301,6 +303,7 @@ export type FactoryState = {
   selectZone: (id: string | null) => void;
   selectSensor: (id: string | null) => void;
   toggleFilter: (type: FilterType) => void;
+  updateLatestReadings: (newReadings: Record<string, Reading>) => void;
   refreshMonitorings: () => Promise<void>;
   refreshAll: () => Promise<void>;
 };
@@ -312,14 +315,19 @@ type AllData = {
   monitorings: MonitoringResponse[];
   zonePaths: Map<string, string>;
   zoneBoundsMap: Map<string, ZoneBounds>;
-  sensorInstances: SensorInstance[];
+  latestReadings: Record<string, Reading>;
 };
 
 async function fetchAllData(): Promise<AllData> {
-  const [zones, sensors, monitorings] = await Promise.all([getZones(), getSensors(), getMonitorings()]);
+  const [zones, sensors, monitorings, latestReadings] = await Promise.all([
+    getZones(),
+    getSensors(),
+    getMonitorings(),
+    getLatestReadings(),
+  ]);
   const zonePaths = calculateZonePaths(zones);
   const zoneBoundsMap = calculateZoneBoundsMap(zones);
-  return { zones, sensors, monitorings, zonePaths, zoneBoundsMap, sensorInstances: calculateSensorInstances(monitorings, zoneBoundsMap) };
+  return { zones, sensors, monitorings, zonePaths, zoneBoundsMap, latestReadings };
 }
 
 export function useFactory(): FactoryState {
@@ -331,21 +339,25 @@ export function useFactory(): FactoryState {
   const [activeFilters, setActiveFilters] = useState<Set<FilterType>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [zonePaths, setZonePaths] = useState<Map<string, string>>(new Map());
   const [zoneBoundsMap, setZoneBoundsMap] = useState<Map<string, ZoneBounds>>(new Map());
-  const [sensorInstances, setSensorInstances] = useState<SensorInstance[]>([]);
+  const [latestReadings, setLatestReadings] = useState<Record<string, Reading>>({});
 
-  // El effect llama fetchAllData (función pura sin setState) y actualiza estado solo en callbacks async
+  // sensorInstances se deriva de monitorings + zoneBoundsMap para reflejar cambios de current_value
+  const sensorInstances = useMemo(
+    () => calculateSensorInstances(monitorings, zoneBoundsMap),
+    [monitorings, zoneBoundsMap]
+  );
+
   useEffect(() => {
     fetchAllData()
-      .then(({ zones, sensors, monitorings, zonePaths, zoneBoundsMap, sensorInstances }) => {
+      .then(({ zones, sensors, monitorings, zonePaths, zoneBoundsMap, latestReadings }) => {
         setZones(zones);
         setSensors(sensors);
         setMonitorings(monitorings);
         setZonePaths(zonePaths);
         setZoneBoundsMap(zoneBoundsMap);
-        setSensorInstances(sensorInstances);
+        setLatestReadings(latestReadings);
         setError(null);
       })
       .catch((e: unknown) => {
@@ -356,29 +368,39 @@ export function useFactory(): FactoryState {
       });
   }, []);
 
+  // Actualiza latestReadings y current_value en monitorings para que el canvas refleje alertas
+  const updateLatestReadings = useCallback((newReadings: Record<string, Reading>) => {
+    setLatestReadings((prev) => ({ ...prev, ...newReadings }));
+    setMonitorings((prev) =>
+      prev.map((m) =>
+        newReadings[m.id] !== undefined
+          ? { ...m, current_value: newReadings[m.id].value }
+          : m
+      )
+    );
+  }, []);
+
   const refreshMonitorings = useCallback(async () => {
     try {
       const [s, m] = await Promise.all([getSensors(), getMonitorings()]);
       setSensors(s);
       setMonitorings(m);
-      setSensorInstances(calculateSensorInstances(m, zoneBoundsMap));
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al actualizar monitoreos');
     }
-  }, [zoneBoundsMap]);
+  }, []);
 
-  // refreshAll se invoca desde event handlers, puede llamar setState síncronamente
   const refreshAll = useCallback(async () => {
     setLoading(true);
     setError(null);
     await fetchAllData()
-      .then(({ zones, sensors, monitorings, zonePaths, zoneBoundsMap, sensorInstances }) => {
+      .then(({ zones, sensors, monitorings, zonePaths, zoneBoundsMap, latestReadings }) => {
         setZones(zones);
         setSensors(sensors);
         setMonitorings(monitorings);
         setZonePaths(zonePaths);
         setZoneBoundsMap(zoneBoundsMap);
-        setSensorInstances(sensorInstances);
+        setLatestReadings(latestReadings);
         setError(null);
       })
       .catch((e: unknown) => {
@@ -410,9 +432,11 @@ export function useFactory(): FactoryState {
   return {
     zones, sensors, monitorings,
     zonePaths, zoneBoundsMap, sensorInstances,
+    latestReadings,
     selectedZoneId, selectedSensorId,
     activeFilters, loading, error,
     selectZone, selectSensor, toggleFilter,
+    updateLatestReadings,
     refreshMonitorings, refreshAll,
   };
 }
