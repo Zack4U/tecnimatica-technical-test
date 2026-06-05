@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useFactory } from '../hooks/useFactory.js';
+import { useSimulator } from '../hooks/useSimulator.js';
 import { useMediaQuery } from '../hooks/useMediaQuery.js';
 import { FactoryCanvas } from '../components/factory/FactoryCanvas.js';
 import { DetailPanel } from '../components/panel/DetailPanel.js';
@@ -8,8 +9,11 @@ import { FormOverlay } from '../components/ui/FormOverlay.js';
 import { MonitoringForm } from '../components/ui/MonitoringForm.js';
 import { SensorForm } from '../components/ui/SensorForm.js';
 import { ThemeToggle } from '../components/ui/ThemeToggle.js';
+import { SimulatorBar } from '../components/ui/SimulatorBar.js';
+import { ReadingsModal } from '../components/ui/ReadingsModal.js';
 import { ToastContainer } from '../components/ui/Toast.js';
 import type { ToastItem } from '../components/ui/Toast.js';
+import type { Reading } from '../types/Reading.js';
 
 type FormMode = 'createMonitoring' | 'createSensor';
 
@@ -18,19 +22,45 @@ export function FactoryPage() {
   const isMobile  = useMediaQuery('(max-width: 767px)');
   const isDesktop = useMediaQuery('(min-width: 1024px)');
 
-  // isDesktop se inicializa síncronamente desde window.matchMedia, por eso es válido como valor inicial
   const [panelOpen, setPanelOpen]           = useState(isDesktop);
   const [showZoneLabels, setShowZoneLabels] = useState(true);
 
-  const [formMode, setFormMode]                     = useState<FormMode>('createMonitoring');
-  const [isFormOpen, setIsFormOpen]                 = useState(false);
-  const [preselectedZoneId, setPreselectedZoneId]   = useState<string | undefined>();
+  const [formMode, setFormMode]                       = useState<FormMode>('createMonitoring');
+  const [isFormOpen, setIsFormOpen]                   = useState(false);
+  const [preselectedZoneId, setPreselectedZoneId]     = useState<string | undefined>();
   const [preselectedSensorId, setPreselectedSensorId] = useState<string | undefined>();
-  const [toasts, setToasts]                         = useState<ToastItem[]>([]);
+  const [toasts, setToasts]                           = useState<ToastItem[]>([]);
+
+  // Estado del historial
+  const [historialOpen, setHistorialOpen]             = useState(false);
+  const [historialMonitoringId, setHistorialMonitoringId] = useState<string | null>(null);
+
+  // IDs de monitoreos recientemente actualizados para el efecto bounce
+  const [recentlyUpdated, setRecentlyUpdated] = useState<Set<string>>(new Set());
 
   const showToast = useCallback((message: string, variant: 'success' | 'error') => {
     setToasts((prev) => [...prev.slice(-2), { id: `${Date.now()}`, message, variant }]);
   }, []);
+
+  // Callback del simulador — actualiza lecturas y dispara bounce visual
+  const handleBatchComplete = useCallback((newReadings: Record<string, Reading>) => {
+    factory.updateLatestReadings(newReadings);
+    const ids = new Set(Object.keys(newReadings));
+    setRecentlyUpdated(ids);
+    setTimeout(() => setRecentlyUpdated(new Set()), 400);
+  }, [factory]);
+
+  const simulator = useSimulator({
+    monitorings: factory.monitorings,
+    latestReadings: factory.latestReadings,
+    onBatchComplete: handleBatchComplete,
+    onAlert: (_id, value, threshold, sensorName, zoneName) => {
+      showToast(
+        `⚠ ${sensorName} superó el umbral en ${zoneName} (${value} > ${threshold})`,
+        'error'
+      );
+    },
+  });
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -66,10 +96,15 @@ export function FactoryPage() {
       selectedSensor={selectedSensor}
       selectedMonitorings={selectedMonitorings}
       activeFilters={factory.activeFilters}
+      latestReadings={factory.latestReadings}
       onToggleFilter={factory.toggleFilter}
       onAddSensor={handleAddSensor}
       onCreateSensor={handleCreateSensor}
       onRefresh={factory.refreshMonitorings}
+      onViewHistory={(monitoringId) => {
+        setHistorialMonitoringId(monitoringId);
+        setHistorialOpen(true);
+      }}
       showToast={showToast}
       isOpen={panelOpen}
       onToggleOpen={() => setPanelOpen((v) => !v)}
@@ -128,7 +163,7 @@ export function FactoryPage() {
       {/* ── Contenido principal ── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-        <main style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
+        <main style={{ flex: 1, position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
           {factory.loading && (
             <div style={{
               position: 'absolute', inset: 0, zIndex: 5,
@@ -140,20 +175,24 @@ export function FactoryPage() {
               </span>
             </div>
           )}
-          <FactoryCanvas
-            zones={factory.zones}
-            sensors={factory.sensors}
-            monitorings={factory.monitorings}
-            zonePaths={factory.zonePaths}
-            zoneBoundsMap={factory.zoneBoundsMap}
-            sensorInstances={factory.sensorInstances}
-            activeFilters={factory.activeFilters}
-            selectedZoneId={factory.selectedZoneId}
-            selectedSensorId={factory.selectedSensorId}
-            showZoneLabels={showZoneLabels}
-            onZoneClick={factory.selectZone}
-            onSensorClick={handleSensorClick}
-          />
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <FactoryCanvas
+              zones={factory.zones}
+              sensors={factory.sensors}
+              monitorings={factory.monitorings}
+              zonePaths={factory.zonePaths}
+              zoneBoundsMap={factory.zoneBoundsMap}
+              sensorInstances={factory.sensorInstances}
+              recentlyUpdated={recentlyUpdated}
+              activeFilters={factory.activeFilters}
+              selectedZoneId={factory.selectedZoneId}
+              selectedSensorId={factory.selectedSensorId}
+              showZoneLabels={showZoneLabels}
+              onZoneClick={factory.selectZone}
+              onSensorClick={handleSensorClick}
+            />
+          </div>
+          <SimulatorBar {...simulator} />
         </main>
 
         {/* Panel lateral (tablet + desktop) */}
@@ -266,6 +305,40 @@ export function FactoryPage() {
             />
           </FormOverlay>
         )}
+      </AnimatePresence>
+
+      {/* Modal de historial de lecturas */}
+      <AnimatePresence>
+        {historialOpen && historialMonitoringId && (() => {
+          const histMonitoring = factory.monitorings.find((m) => m.id === historialMonitoringId);
+          if (!histMonitoring) return null;
+          const histSensor = factory.sensors.find((s) => s.id === histMonitoring.sensor.id);
+          if (!histSensor) return null;
+
+          // Zonas disponibles para este sensor
+          const sensorMonitorings = factory.monitorings.filter(
+            (m) => m.sensor.id === histSensor.id
+          );
+          const availableZones = sensorMonitorings.map((m) => m.zone);
+          const selectedZoneId = histMonitoring.zone.id;
+
+          return (
+            <ReadingsModal
+              monitoringId={historialMonitoringId}
+              monitoring={histMonitoring}
+              sensor={histSensor}
+              availableZones={availableZones}
+              selectedZoneId={selectedZoneId}
+              onZoneChange={(zoneId) => {
+                const m = factory.monitorings.find(
+                  (mon) => mon.sensor.id === histSensor.id && mon.zone.id === zoneId
+                );
+                if (m) setHistorialMonitoringId(m.id);
+              }}
+              onClose={() => setHistorialOpen(false)}
+            />
+          );
+        })()}
       </AnimatePresence>
 
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />

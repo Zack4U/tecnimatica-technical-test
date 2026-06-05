@@ -1,24 +1,42 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { ZoneResponse } from '../../types/Zone.js';
 import type { SensorResponse } from '../../types/Sensor.js';
 import type { MonitoringResponse } from '../../types/Monitoring.js';
 import type { FilterType } from '../../hooks/useFactory.js';
+import type { Reading } from '../../types/Reading.js';
 import { Badge } from '../ui/Badge.js';
 import { updateMonitoring } from '../../services/api.js';
 import { MonitoringEditModal, MonitoringDeleteModal } from '../ui/MonitoringActionModal.js';
 
 type ActionModal = 'edit' | 'delete' | null;
 
+const SENSOR_UNITS: Record<string, string> = {
+  temperature: '°C',
+  pressure:    ' bar',
+  vibration:   ' mm/s',
+  flow:        ' L/min',
+};
+
+function timeAgo(dateStr: string): string {
+  const secs = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (secs < 60)  return `hace ${secs}s`;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60)  return `hace ${mins}m`;
+  return new Date(dateStr).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+}
+
 type Props = {
   selectedZone: ZoneResponse | null;
   selectedSensor: SensorResponse | null;
   selectedMonitorings: MonitoringResponse[];
   activeFilters: Set<FilterType>;
+  latestReadings: Record<string, Reading>;
   onToggleFilter: (type: FilterType) => void;
   onAddSensor: () => void;
   onCreateSensor: () => void;
   onRefresh: () => Promise<void>;
+  onViewHistory: (monitoringId: string) => void;
   showToast: (msg: string, variant: 'success' | 'error') => void;
   isOpen: boolean;
   onToggleOpen: () => void;
@@ -52,10 +70,12 @@ export function DetailPanel({
   selectedSensor,
   selectedMonitorings,
   activeFilters,
+  latestReadings,
   onToggleFilter,
   onAddSensor,
   onCreateSensor,
   onRefresh,
+  onViewHistory,
   showToast,
   isOpen,
   onToggleOpen,
@@ -117,7 +137,9 @@ export function DetailPanel({
                     sensor={selectedSensor}
                     monitorings={selectedMonitorings}
                     anyAlert={anyAlert}
+                    latestReadings={latestReadings}
                     onToggleStatus={handleToggleStatus}
+                    onViewHistory={onViewHistory}
                   />
                 ) : null}
               </PanelSection>
@@ -278,13 +300,19 @@ function SensorDetail({
   sensor,
   monitorings,
   anyAlert,
+  latestReadings,
   onToggleStatus,
+  onViewHistory,
 }: {
   sensor: SensorResponse;
   monitorings: MonitoringResponse[];
   anyAlert: boolean;
+  latestReadings: Record<string, Reading>;
   onToggleStatus: (m: MonitoringResponse) => void;
+  onViewHistory: (monitoringId: string) => void;
 }) {
+  const unit = SENSOR_UNITS[sensor.type] ?? '';
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <DetailRow label="Nombre" value={sensor.name} bold />
@@ -294,12 +322,14 @@ function SensorDetail({
       </DetailRow>
 
       {monitorings.map((m) => {
-        const isAlert =
-          m.current_value !== null && m.current_value !== undefined &&
-          m.current_value > m.threshold_value;
+        const latest   = latestReadings[m.id];
+        const liveValue = latest?.value ?? m.current_value;
+        const isAlert  =
+          liveValue !== null && liveValue !== undefined &&
+          liveValue > m.threshold_value;
         const pct =
           m.threshold_value > 0
-            ? Math.min(100, ((m.current_value ?? 0) / m.threshold_value) * 100)
+            ? Math.min(100, ((liveValue ?? 0) / m.threshold_value) * 100)
             : 0;
 
         return (
@@ -319,15 +349,18 @@ function SensorDetail({
               />
             </div>
 
-            {/* Valores */}
+            {/* Valor actual (última lectura real) */}
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: 4 }}>
               <span>
                 Actual{' '}
                 <strong style={{ color: isAlert ? 'var(--sensor-alert)' : 'var(--text-primary)', fontSize: '0.7rem' }}>
-                  {m.current_value ?? '—'}
+                  {liveValue !== null && liveValue !== undefined ? `${liveValue}${unit}` : '—'}
                 </strong>
+                {latest?.recorded_at && (
+                  <LiveTimestamp recordedAt={latest.recorded_at} />
+                )}
               </span>
-              <span>Umbral {m.threshold_value}</span>
+              <span>Umbral {m.threshold_value}{unit}</span>
             </div>
 
             {/* Barra de progreso */}
@@ -339,10 +372,45 @@ function SensorDetail({
                 transition={{ duration: 0.5 }}
               />
             </div>
+
+            {/* Botón Ver historial */}
+            <button
+              type="button"
+              onClick={() => onViewHistory(m.id)}
+              style={{
+                marginTop: 6, padding: '4px 10px',
+                borderRadius: 6, border: '1px solid var(--border-ui)',
+                backgroundColor: 'var(--bg-surface)',
+                color: 'var(--text-secondary)',
+                fontSize: '0.65rem', fontWeight: 600,
+                cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+                display: 'flex', alignItems: 'center', gap: 4,
+                transition: 'background 0.15s',
+              }}
+            >
+              <HistoryIcon size={11} />
+              Ver historial
+            </button>
           </div>
         );
       })}
     </div>
+  );
+}
+
+function LiveTimestamp({ recordedAt }: { recordedAt: string }) {
+  const [label, setLabel] = useState(() => timeAgo(recordedAt));
+
+  useEffect(() => {
+    setLabel(timeAgo(recordedAt));
+    const id = setInterval(() => setLabel(timeAgo(recordedAt)), 10_000);
+    return () => clearInterval(id);
+  }, [recordedAt]);
+
+  return (
+    <span style={{ color: 'var(--text-muted)', fontSize: '0.6rem', marginLeft: 4 }}>
+      · {label}
+    </span>
   );
 }
 
@@ -437,4 +505,12 @@ function PauseIcon({ size = 14 }: { size?: number }) {
 }
 function PlayIcon({ size = 14 }: { size?: number }) {
   return <svg width={size} height={size} viewBox="0 0 14 14" fill="none"><path d="M4 2.5l8 4.5-8 4.5V2.5z" fill="currentColor" /></svg>;
+}
+function HistoryIcon({ size = 13 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 14 14" fill="none">
+      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M7 4v3.5l2.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
