@@ -71,7 +71,7 @@ Three.js, React Flow, Konva, Axios, Lodash, Moment.js, ni librerías UI externas
 ## Git
 
 - Un commit = un cambio atómico y coherente.
-- Mensajes en **español**, en imperativo presente:
+- Mensajes en **ingles**, en imperativo presente:
   `Agrega endpoint de sensores` · `Corrige validación de umbral` · `Refactoriza capa de repositorio`
 - No hacer commits que mezclen múltiples funcionalidades.
 

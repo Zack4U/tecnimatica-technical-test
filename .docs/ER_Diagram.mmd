@@ -1,0 +1,30 @@
+erDiagram
+  SENSORS {
+    uuid id PK
+    varchar name
+    enum type
+    varchar manufacturer
+    date manufacture_date
+    timestamp created_at
+  }
+  ZONES {
+    uuid id PK
+    varchar name
+    text description
+    varchar location
+    varchar operational_status
+    timestamp created_at
+  }
+  MONITORINGS {
+    uuid id PK
+    uuid sensor_id FK
+    uuid zone_id FK
+    date installation_date
+    enum reading_type
+    numeric threshold_value
+    numeric current_value
+    enum status
+    timestamp created_at
+  }
+  SENSORS ||--o{ MONITORINGS : "monitorea"
+  ZONES ||--o{ MONITORINGS : "es monitoreada por"
