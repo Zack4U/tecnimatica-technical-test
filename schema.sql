@@ -187,3 +187,125 @@ INSERT INTO monitorings (
    'a1000000-0000-0000-0000-000000000002',
    'b2000000-0000-0000-0000-000000000006',
    '2022-11-14', 'pressure', 180.00, 195.00, 'active');
+
+-- =============================================================
+-- Lecturas de prueba (~10 por monitoring, timestamps cada 30s)
+-- c3..001: temperatura caldera — últimos valores superan umbral (85°)
+-- =============================================================
+
+-- Monitoring 001: temperatura caldera (umbral 85°, valores crecientes que lo superan)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000001', 81.20, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000001', 82.10, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000001', 83.40, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000001', 84.90, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000001', 86.30, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000001', 88.10, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000001', 90.50, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000001', 91.70, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000001', 92.10, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000001', 92.50, NOW());
+
+-- Monitoring 002: temperatura pasillo (umbral 80°, valores normales)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000002', 76.80, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000002', 77.20, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000002', 76.50, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000002', 77.90, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000002', 78.10, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000002', 77.40, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000002', 78.60, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000002', 77.80, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000002', 78.30, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000002', 78.00, NOW());
+
+-- Monitoring 003: presión línea hidráulica (umbral 200, valores por encima)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000003', 205.50, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000003', 208.20, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000003', 210.10, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000003', 212.80, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000003', 211.40, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000003', 213.90, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000003', 214.20, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000003', 215.00, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000003', 215.40, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000003', 215.75, NOW());
+
+-- Monitoring 004: vibración compresor (umbral 5.00, valores normales)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000004', 3.60, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000004', 3.75, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000004', 3.82, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000004', 3.70, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000004', 3.90, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000004', 3.78, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000004', 3.85, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000004', 3.72, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000004', 3.88, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000004', 3.80, NOW());
+
+-- Monitoring 005: flujo tubería (PAUSED — historial antes de pausarse)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000005', 118.50, NOW() - INTERVAL '30 minutes'),
+  ('c3000000-0000-0000-0000-000000000005', 119.20, NOW() - INTERVAL '29 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000005', 120.10, NOW() - INTERVAL '29 minutes'),
+  ('c3000000-0000-0000-0000-000000000005', 115.80, NOW() - INTERVAL '28 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000005', 112.30, NOW() - INTERVAL '28 minutes'),
+  ('c3000000-0000-0000-0000-000000000005', 108.60, NOW() - INTERVAL '27 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000005', 95.40,  NOW() - INTERVAL '27 minutes'),
+  ('c3000000-0000-0000-0000-000000000005', 72.10,  NOW() - INTERVAL '26 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000005', 35.20,  NOW() - INTERVAL '26 minutes'),
+  ('c3000000-0000-0000-0000-000000000005', 0.00,   NOW() - INTERVAL '25 minutes 30 seconds');
+
+-- Monitoring 006: temperatura horno (umbral 450°, valores normales)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000006', 428.50, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000006', 429.80, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000006', 431.20, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000006', 430.60, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000006', 432.10, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000006', 431.80, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000006', 429.90, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000006', 430.40, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000006', 430.70, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000006', 430.00, NOW());
+
+-- Monitoring 007: presión depósito (umbral 6.00, valores normales)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000007', 4.35, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000007', 4.42, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000007', 4.38, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000007', 4.50, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000007', 4.45, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000007', 4.52, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000007', 4.48, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000007', 4.55, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000007', 4.47, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000007', 4.50, NOW());
+
+-- Monitoring 008: vibración bomba centrífuga (umbral 4.00, valores por encima)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000008', 5.90, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000008', 6.05, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000008', 6.10, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000008', 6.08, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000008', 6.15, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000008', 6.18, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000008', 6.20, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000008', 6.17, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000008', 6.22, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000008', 6.20, NOW());
+
+-- Monitoring 009: presión pasillo (umbral 180, valores por encima)
+INSERT INTO readings (monitoring_id, value, recorded_at) VALUES
+  ('c3000000-0000-0000-0000-000000000009', 188.20, NOW() - INTERVAL '4 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000009', 190.50, NOW() - INTERVAL '4 minutes'),
+  ('c3000000-0000-0000-0000-000000000009', 191.80, NOW() - INTERVAL '3 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000009', 192.40, NOW() - INTERVAL '3 minutes'),
+  ('c3000000-0000-0000-0000-000000000009', 193.10, NOW() - INTERVAL '2 minutes 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000009', 193.80, NOW() - INTERVAL '2 minutes'),
+  ('c3000000-0000-0000-0000-000000000009', 194.20, NOW() - INTERVAL '1 minute 30 seconds'),
+  ('c3000000-0000-0000-0000-000000000009', 194.60, NOW() - INTERVAL '1 minute'),
+  ('c3000000-0000-0000-0000-000000000009', 194.90, NOW() - INTERVAL '30 seconds'),
+  ('c3000000-0000-0000-0000-000000000009', 195.00, NOW());
