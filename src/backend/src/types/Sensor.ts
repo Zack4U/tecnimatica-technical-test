@@ -13,6 +13,13 @@ export type Sensor = {
 
 export type SensorResponse = Sensor;
 
+export type CreateSensorDto = {
+  name: string;
+  type: SensorType;
+  manufacturer: string;
+  manufacture_date: string;
+};
+
 export type SensorWithZones = SensorResponse & {
   zones: ZoneResponse[];
 };

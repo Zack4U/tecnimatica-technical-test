@@ -174,6 +174,10 @@ export const monitoringRepository = {
     return (await selectFullById(inserted.id))!;
   },
 
+  async delete(id: string): Promise<void> {
+    await db.delete(monitorings).where(eq(monitorings.id, id));
+  },
+
   async update(id: string, data: UpdateMonitoringDto): Promise<MonitoringResponse> {
     const updateValues: {
       thresholdValue?: string;

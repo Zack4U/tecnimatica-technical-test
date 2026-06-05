@@ -91,6 +91,27 @@ export async function monitoringsRoutes(
     }
   );
 
+  app.delete(
+    '/monitorings/:id',
+    {
+      schema: {
+        tags: ['monitorings'],
+        summary: 'Eliminar monitoreo',
+        description: 'Elimina la asignación sensor-zona. No elimina el sensor ni la zona.',
+        params: z.object({ id: z.string() }),
+        response: {
+          204: z.object({}),
+          404: ErrorResponseSchema,
+          500: ErrorResponseSchema,
+        },
+      },
+    },
+    async (req, reply) => {
+      await monitoringService.delete(req.params.id);
+      return reply.status(204).send({});
+    }
+  );
+
   app.patch(
     '/monitorings/:id',
     {

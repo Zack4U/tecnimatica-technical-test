@@ -48,6 +48,14 @@ export const monitoringService = {
     return monitoringRepository.create(data);
   },
 
+  async delete(id: string): Promise<void> {
+    const monitoring = await monitoringRepository.findById(id);
+    if (!monitoring) {
+      throw new NotFoundError(`Monitoreo con id "${id}" no existe`);
+    }
+    await monitoringRepository.delete(id);
+  },
+
   async update(
     id: string,
     data: UpdateMonitoringDto

@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { db } from '../db/index.js';
 import { sensors, monitorings, zones } from '../db/schema.js';
-import type { SensorResponse } from '../types/Sensor.js';
+import type { SensorResponse, CreateSensorDto } from '../types/Sensor.js';
 import type { ZoneResponse } from '../types/Zone.js';
 import type { ZoneOperationalStatus } from '../types/Zone.js';
 
@@ -51,6 +51,34 @@ export const sensorRepository = {
       manufacturer: row.manufacturer,
       manufacture_date: row.manufacture_date,
       created_at: row.created_at.toISOString(),
+    };
+  },
+
+  async create(data: CreateSensorDto): Promise<SensorResponse> {
+    const [inserted] = await db
+      .insert(sensors)
+      .values({
+        name: data.name,
+        type: data.type,
+        manufacturer: data.manufacturer,
+        manufactureDate: data.manufacture_date,
+      })
+      .returning({
+        id: sensors.id,
+        name: sensors.name,
+        type: sensors.type,
+        manufacturer: sensors.manufacturer,
+        manufacture_date: sensors.manufactureDate,
+        created_at: sensors.createdAt,
+      });
+
+    return {
+      id: inserted.id,
+      name: inserted.name,
+      type: inserted.type,
+      manufacturer: inserted.manufacturer,
+      manufacture_date: inserted.manufacture_date,
+      created_at: inserted.created_at.toISOString(),
     };
   },
 
