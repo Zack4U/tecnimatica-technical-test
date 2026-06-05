@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-app:         #ECEEF2;
+  --bg-surface:     #F7F8FA;
+  --bg-panel:       #FFFFFF;
+  --text-primary:   #0D1520;
+  --text-secondary: #4B5668;
+  --text-muted:     #8C97A8;
+  --zone-fill:      #FFFFFF;
+  --zone-stroke:    #C8CDD6;
+  --border-ui:      rgba(0,0,0,0.08);
+  --sensor-temp:    #D94F1E;
+  --sensor-vib:     #1A8A5A;
+  --sensor-flow:    #7040CC;
+  --sensor-pres:    #1060B8;
+  --sensor-alert:   #DC2626;
+  --sensor-paused:  #94A3B8;
+}
+
+.dark {
+  --bg-app:         #0A0E16;
+  --bg-surface:     #111520;
+  --bg-panel:       #161B26;
+  --text-primary:   #DDE3EE;
+  --text-secondary: #7A8699;
+  --text-muted:     #3E4758;
+  --zone-fill:      #131825;
+  --zone-stroke:    #2A3142;
+  --border-ui:      rgba(255,255,255,0.07);
+}
