@@ -24,6 +24,14 @@ const READING_LABELS: Record<ReadingType, string> = {
   flow:        'Flujo',
 };
 
+// Unidades del Sistema Internacional para cada tipo de lectura
+const READING_UNITS: Record<ReadingType, string> = {
+  temperature: '°C',
+  pressure:    'bar',
+  vibration:   'mm/s',
+  flow:        'L/min',
+};
+
 export function MonitoringForm({
   mode,
   monitoring,
@@ -55,6 +63,11 @@ export function MonitoringForm({
   const [status, setStatus] = useState<MonitoringStatus>(
     () => (mode === 'edit' && monitoring) ? monitoring.status : 'active'
   );
+
+  // Unidad activa según el tipo de lectura seleccionado (o fijado en edición)
+  const activeUnit = mode === 'edit' && monitoring
+    ? READING_UNITS[monitoring.reading_type]
+    : READING_UNITS[readingType];
 
   useEffect(() => {
     if (mode !== 'create') return;
@@ -187,29 +200,25 @@ export function MonitoringForm({
           </>
         )}
 
-        <Field label="Valor umbral" error={fieldErrors['thresholdValue']}>
-          <input
+        <Field label={`Valor umbral (${activeUnit})`} error={fieldErrors['thresholdValue']}>
+          <UnitInput
             id="f-threshold"
-            type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="Ej: 85.00"
             value={thresholdValue}
-            onChange={(e) => setThresholdValue(e.target.value)}
-            style={inputStyle}
+            unit={activeUnit}
+            placeholder="Ej: 85.00"
+            min="0.01"
+            onChange={setThresholdValue}
           />
         </Field>
 
-        <Field label="Valor actual (opcional)">
-          <input
+        <Field label={`Valor actual (${activeUnit}) — opcional`}>
+          <UnitInput
             id="f-current"
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Ej: 72.50"
             value={currentValue}
-            onChange={(e) => setCurrentValue(e.target.value)}
-            style={inputStyle}
+            unit={activeUnit}
+            placeholder="Ej: 72.50"
+            min="0"
+            onChange={setCurrentValue}
           />
         </Field>
 
@@ -250,6 +259,45 @@ export function MonitoringForm({
         </div>
       </div>
     </form>
+  );
+}
+
+// Input numérico con unidad SI como suffix integrado
+function UnitInput({
+  id, value, unit, placeholder, min, onChange,
+}: {
+  id: string;
+  value: string;
+  unit: string;
+  placeholder: string;
+  min: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+      <input
+        id={id}
+        type="number"
+        min={min}
+        step="0.01"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{ ...inputStyle, borderRadius: '0.35rem 0 0 0.35rem', flex: 1 }}
+      />
+      <span style={{
+        padding: '0.4rem 0.6rem',
+        border: '1px solid var(--border-ui)', borderLeft: 'none',
+        borderRadius: '0 0.35rem 0.35rem 0',
+        backgroundColor: 'var(--bg-app)',
+        color: 'var(--text-muted)',
+        fontSize: '0.72rem', fontWeight: 700,
+        whiteSpace: 'nowrap', flexShrink: 0,
+        lineHeight: 1.5,
+      }}>
+        {unit}
+      </span>
+    </div>
   );
 }
 

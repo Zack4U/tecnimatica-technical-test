@@ -11,8 +11,16 @@ const ReadingResponseSchema = z.object({
   recorded_at: z.string(),
 });
 
+// UUID relajado: valida formato hex sin exigir versión/variante (compatibilidad con IDs de seed)
+const uuidLike = z
+  .string()
+  .regex(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+    'El monitoring_id debe ser un UUID válido'
+  );
+
 const CreateReadingBodySchema = z.object({
-  monitoring_id: z.string().uuid('El monitoring_id debe ser un UUID válido'),
+  monitoring_id: uuidLike,
   value: z.number(),
   recorded_at: z.string().datetime().optional(),
 });
@@ -21,7 +29,7 @@ const CreateReadingsBatchBodySchema = z.object({
   readings: z
     .array(
       z.object({
-        monitoring_id: z.string().uuid('El monitoring_id debe ser un UUID válido'),
+        monitoring_id: uuidLike,
         value: z.number(),
         recorded_at: z.string().datetime().optional(),
       })
@@ -48,7 +56,7 @@ export async function readingsRoutes(
         summary: 'Historial de lecturas de un monitoreo',
         description:
           'Retorna las últimas N lecturas ordenadas de más antigua a más reciente (para chart).',
-        params: z.object({ id: z.string().uuid() }),
+        params: z.object({ id: z.string() }),
         querystring: z.object({
           limit: z.coerce.number().min(1).max(100).default(20),
         }),
@@ -75,7 +83,7 @@ export async function readingsRoutes(
         tags: ['readings'],
         summary: 'Última lectura de un monitoreo',
         description: 'Retorna la lectura más reciente del monitoreo indicado.',
-        params: z.object({ id: z.string().uuid() }),
+        params: z.object({ id: z.string() }),
         response: {
           200: ReadingResponseSchema.nullable(),
           404: ErrorResponseSchema,

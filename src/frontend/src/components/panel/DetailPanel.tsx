@@ -139,7 +139,6 @@ export function DetailPanel({
                     anyAlert={anyAlert}
                     latestReadings={latestReadings}
                     onToggleStatus={handleToggleStatus}
-                    onViewHistory={onViewHistory}
                   />
                 ) : null}
               </PanelSection>
@@ -151,6 +150,7 @@ export function DetailPanel({
                   <ActionBtn icon={<UserPlusIcon />} label="Crear nuevo sensor"      onClick={onCreateSensor} />
                   {hasMonitorings && (
                     <>
+                      <ActionBtn icon={<HistoryIcon size={16} />} label="Ver historial de lecturas" onClick={() => onViewHistory(selectedMonitorings[0]!.id)} />
                       <ActionBtn icon={<PencilIcon />} label="Editar monitoreo"   onClick={() => setActionModal('edit')} />
                       <ActionBtn icon={<TrashIcon />}  label="Eliminar monitoreo" onClick={() => setActionModal('delete')} danger />
                     </>
@@ -302,14 +302,12 @@ function SensorDetail({
   anyAlert,
   latestReadings,
   onToggleStatus,
-  onViewHistory,
 }: {
   sensor: SensorResponse;
   monitorings: MonitoringResponse[];
   anyAlert: boolean;
   latestReadings: Record<string, Reading>;
   onToggleStatus: (m: MonitoringResponse) => void;
-  onViewHistory: (monitoringId: string) => void;
 }) {
   const unit = SENSOR_UNITS[sensor.type] ?? '';
 
@@ -373,24 +371,6 @@ function SensorDetail({
               />
             </div>
 
-            {/* Botón Ver historial */}
-            <button
-              type="button"
-              onClick={() => onViewHistory(m.id)}
-              style={{
-                marginTop: 6, padding: '4px 10px',
-                borderRadius: 6, border: '1px solid var(--border-ui)',
-                backgroundColor: 'var(--bg-surface)',
-                color: 'var(--text-secondary)',
-                fontSize: '0.65rem', fontWeight: 600,
-                cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-                display: 'flex', alignItems: 'center', gap: 4,
-                transition: 'background 0.15s',
-              }}
-            >
-              <HistoryIcon size={11} />
-              Ver historial
-            </button>
           </div>
         );
       })}

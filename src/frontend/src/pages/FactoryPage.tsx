@@ -220,11 +220,11 @@ export function FactoryPage() {
             </button>
 
             <motion.div
-              animate={{ width: panelOpen ? 220 : 0 }}
+              animate={{ width: panelOpen ? 280 : 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
               style={{ overflow: 'hidden', flexShrink: 0 }}
             >
-              <div style={{ width: 220, height: '100%' }}>{panelContent}</div>
+              <div style={{ width: 280, height: '100%' }}>{panelContent}</div>
             </motion.div>
           </div>
         )}
