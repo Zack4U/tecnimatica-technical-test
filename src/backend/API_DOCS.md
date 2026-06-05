@@ -269,3 +269,112 @@ Swagger UI: `http://localhost:3000/docs`
 | 400    | Body vacío o threshold_value ≤ 0 |
 | 404    | El monitoreo con ese id no existe |
 | 500    | Error interno del servidor |
+
+---
+
+## Endpoints de lecturas (readings)
+
+### GET /api/v1/monitorings/:id/readings
+
+Historial de lecturas de un monitoreo. Ordenadas ASC para chart.
+
+**Query params:**
+- `limit` (número, 1–100, default 20)
+
+**Respuesta exitosa `200`:**
+```json
+[
+  {
+    "id": "uuid",
+    "monitoring_id": "uuid",
+    "value": 92.5,
+    "recorded_at": "2026-06-04T10:00:00.000Z"
+  }
+]
+```
+
+**Errores posibles:**
+| Código | Cuándo ocurre |
+|--------|--------------|
+| 404    | El monitoreo con ese id no existe |
+| 500    | Error interno del servidor |
+
+---
+
+### GET /api/v1/monitorings/:id/readings/latest
+
+Última lectura de un monitoreo específico.
+
+**Respuesta exitosa `200`:** `ReadingResponse` o `null` si no hay lecturas.
+
+**Errores posibles:**
+| Código | Cuándo ocurre |
+|--------|--------------|
+| 404    | El monitoreo con ese id no existe |
+| 500    | Error interno del servidor |
+
+---
+
+### GET /api/v1/readings/latest
+
+Última lectura de todos los monitoreos activos. Usado por el frontend al cargar el canvas inicial.
+
+**Respuesta exitosa `200`:**
+```json
+{
+  "<monitoring_id>": {
+    "id": "uuid",
+    "monitoring_id": "uuid",
+    "value": 92.5,
+    "recorded_at": "2026-06-04T10:00:00.000Z"
+  }
+}
+```
+
+---
+
+### POST /api/v1/readings
+
+Registrar una lectura individual. Actualiza `current_value` en el monitoring.
+
+**Body:**
+```json
+{ "monitoring_id": "uuid", "value": 76.5, "recorded_at": "2026-06-04T10:00:00Z" }
+```
+`recorded_at` es opcional — si se omite usa `now()` en BD.
+
+**Errores posibles:**
+| Código | Cuándo ocurre |
+|--------|--------------|
+| 400    | Body inválido o value no es número finito |
+| 404    | El monitoreo no existe |
+| 422    | El monitoreo está pausado |
+| 500    | Error interno del servidor |
+
+---
+
+### POST /api/v1/readings/batch
+
+Registrar lecturas de N sensores en una sola petición. Optimizado para el simulador del frontend. Los monitoreos pausados se ignoran silenciosamente.
+
+**Body:**
+```json
+{
+  "readings": [
+    { "monitoring_id": "uuid1", "value": 76.5 },
+    { "monitoring_id": "uuid2", "value": 3.2 }
+  ]
+}
+```
+
+**Respuesta exitosa `201`:**
+```json
+{ "created": 2, "skipped": 1, "readings": [...] }
+```
+
+**Errores posibles:**
+| Código | Cuándo ocurre |
+|--------|--------------|
+| 400    | Body inválido o array vacío |
+| 404    | Algún monitoring_id no existe |
+| 500    | Error interno del servidor |
