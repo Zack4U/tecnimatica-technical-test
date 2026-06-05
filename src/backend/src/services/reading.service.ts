@@ -3,7 +3,11 @@ import { db } from '../db/index.js';
 import { monitorings } from '../db/schema.js';
 import { readingRepository } from '../repositories/reading.repository.js';
 import { monitoringRepository } from '../repositories/monitoring.repository.js';
-import { ValidationError, NotFoundError } from '../errors/index.js';
+import {
+  ValidationError,
+  NotFoundError,
+  UnprocessableEntityError,
+} from '../errors/index.js';
 import type {
   ReadingResponse,
   CreateReadingDto,
@@ -57,7 +61,7 @@ export const readingService = {
       );
     }
     if (monitoring.status === 'paused') {
-      throw new ValidationError(
+      throw new UnprocessableEntityError(
         `El monitoreo "${data.monitoring_id}" está pausado y no acepta nuevas lecturas`
       );
     }

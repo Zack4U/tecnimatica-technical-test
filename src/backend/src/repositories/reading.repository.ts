@@ -61,25 +61,28 @@ export const readingRepository = {
 
   // Última lectura de cada monitoring — usa DISTINCT ON para eficiencia
   async findLatestPerMonitoring(): Promise<Map<string, ReadingResponse>> {
-    const result = await db.execute<{
+    type LatestRow = {
       id: string;
       monitoring_id: string;
       value: string;
       recorded_at: Date;
-    }>(sql`
-      SELECT DISTINCT ON (monitoring_id)
-        id,
-        monitoring_id,
-        value::text,
-        recorded_at
+    };
+
+    const rows = await db.execute<LatestRow>(sql`
+      SELECT DISTINCT ON (readings.monitoring_id)
+        readings.id,
+        readings.monitoring_id,
+        readings.value::text,
+        readings.recorded_at
       FROM readings
-      INNER JOIN ${monitorings} ON readings.monitoring_id = ${monitorings.id}
+      INNER JOIN ${monitorings}
+        ON readings.monitoring_id = ${monitorings.id}
       WHERE ${monitorings.status} = 'active'
-      ORDER BY monitoring_id, recorded_at DESC
+      ORDER BY readings.monitoring_id, readings.recorded_at DESC
     `);
 
     const map = new Map<string, ReadingResponse>();
-    for (const row of result.rows) {
+    for (const row of rows) {
       map.set(row.monitoring_id, {
         id: row.id,
         monitoring_id: row.monitoring_id,

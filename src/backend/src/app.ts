@@ -12,6 +12,7 @@ import { isAppError } from "./errors/index.js";
 import { sensorsRoutes } from "./routes/sensors.routes.js";
 import { zonesRoutes } from "./routes/zones.routes.js";
 import { monitoringsRoutes } from "./routes/monitorings.routes.js";
+import { readingsRoutes } from "./routes/readings.routes.js";
 
 export function buildApp() {
   const app = Fastify({ logger: true });
@@ -38,6 +39,10 @@ export function buildApp() {
         {
           name: "monitorings",
           description: "Asignaciones sensor-zona y monitoreos",
+        },
+        {
+          name: "readings",
+          description: "Lecturas de sensores por monitoreo",
         },
       ],
     },
@@ -73,6 +78,7 @@ export function buildApp() {
   app.register(sensorsRoutes, { prefix: "/api/v1" });
   app.register(zonesRoutes, { prefix: "/api/v1" });
   app.register(monitoringsRoutes, { prefix: "/api/v1" });
+  app.register(readingsRoutes, { prefix: "/api/v1" });
 
   return app;
 }

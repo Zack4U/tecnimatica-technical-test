@@ -38,13 +38,30 @@ export class InternalError extends Error {
   }
 }
 
+// Para operaciones semánticamente inválidas (ej: lectura en monitoreo pausado)
+export class UnprocessableEntityError extends Error {
+  readonly statusCode = 422;
+  readonly errorName = 'Unprocessable Entity';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'UnprocessableEntityError';
+  }
+}
+
 export function isAppError(
   error: unknown
-): error is ValidationError | NotFoundError | ConflictError | InternalError {
+): error is
+  | ValidationError
+  | NotFoundError
+  | ConflictError
+  | InternalError
+  | UnprocessableEntityError {
   return (
     error instanceof ValidationError ||
     error instanceof NotFoundError ||
     error instanceof ConflictError ||
-    error instanceof InternalError
+    error instanceof InternalError ||
+    error instanceof UnprocessableEntityError
   );
 }
