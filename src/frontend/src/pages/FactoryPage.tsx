@@ -152,14 +152,14 @@ export function FactoryPage() {
           </span>
         </div>
 
-        {/* Centro: badges de estado de sensores */}
-        {!factory.loading && factory.sensorInstances.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
-            <StatusBadge count={normalCount}   label="Normal"    color="var(--sensor-vib)"   pulse={false} />
-            <StatusBadge count={dangerCount}   label="Peligro"   color="var(--sensor-temp)"  pulse={dangerCount > 0} />
-            <StatusBadge count={criticalCount} label="Crítico"   color="var(--sensor-alert)" pulse={criticalCount > 0} />
+        {/* Centro: badges en desktop (≥ 768 px) — en mobile se muestran bajo la topbar */}
+        {!isMobile && !factory.loading && factory.sensorInstances.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center' }}>
+            <StatusBadge count={normalCount}   label="Normal"   color="var(--sensor-vib)"    pulse={false} />
+            <StatusBadge count={dangerCount}   label="Peligro"  color="var(--sensor-temp)"   pulse={dangerCount > 0} />
+            <StatusBadge count={criticalCount} label="Crítico"  color="var(--sensor-alert)"  pulse={criticalCount > 0} />
             {pausedCount > 0 && (
-              <StatusBadge count={pausedCount} label="Pausado"   color="var(--sensor-paused)" pulse={false} />
+              <StatusBadge count={pausedCount} label="Pausado"  color="var(--sensor-paused)" pulse={false} />
             )}
           </div>
         )}
@@ -192,6 +192,24 @@ export function FactoryPage() {
           <ThemeToggle />
         </div>
       </header>
+
+      {/* ── Badge bar mobile (< 768 px) — tira horizontal bajo la topbar ── */}
+      {isMobile && !factory.loading && factory.sensorInstances.length > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '4px 12px',
+          backgroundColor: 'var(--bg-panel)',
+          borderBottom: '0.5px solid var(--border-ui)',
+          flexShrink: 0, overflowX: 'auto',
+        }}>
+          <StatusBadge count={normalCount}   label="Normal"   color="var(--sensor-vib)"    pulse={false} />
+          <StatusBadge count={dangerCount}   label="Peligro"  color="var(--sensor-temp)"   pulse={dangerCount > 0} />
+          <StatusBadge count={criticalCount} label="Crítico"  color="var(--sensor-alert)"  pulse={criticalCount > 0} />
+          {pausedCount > 0 && (
+            <StatusBadge count={pausedCount} label="Pausado"  color="var(--sensor-paused)" pulse={false} />
+          )}
+        </div>
+      )}
 
       {/* ── Contenido principal ── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
