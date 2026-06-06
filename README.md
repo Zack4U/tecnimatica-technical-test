@@ -48,21 +48,25 @@ Docker Compose levanta los tres servicios en orden:
 2. **backend** — aplica el schema automáticamente y arranca Fastify
 3. **frontend** — sirve la SPA compilada con nginx
 
-| Servicio | URL |
-|----------|-----|
-| Frontend | <http://localhost:5173> |
-| API REST | <http://localhost:3000/api/v1> |
-| Swagger UI | <http://localhost:3000/docs> |
+| Servicio | Puerto por defecto | URL / conexión |
+|----------|--------------------|----------------|
+| Frontend (nginx) | 80 | <http://localhost> |
+| API REST | 3000 | <http://localhost:3000/api/v1> |
+| Swagger UI | 3000 | <http://localhost:3000/docs> |
+| PostgreSQL | 5432 | `localhost:5432` · DB: `monitoring_db` · usuario: `postgres` |
 
-> Los puertos son configurables en `.env` con `FRONTEND_PORT` y `BACKEND_PORT`.
+> Los puertos son configurables en `.env` con `FRONTEND_PORT`, `BACKEND_PORT` y `POSTGRES_PORT`.
 
-### Cargar datos de prueba (opcional)
+### Datos de prueba
 
-```bash
-docker compose exec postgres psql \
-  -U postgres -d monitoring_db \
-  -f /dev/stdin < schema.sql
-```
+Se cargan **automáticamente** en el primer arranque. `schema.sql` está montado en
+`/docker-entrypoint-initdb.d/` del contenedor de postgres, por lo que PostgreSQL
+lo ejecuta al inicializar el volumen (tablas + 10 sensores, 6 zonas, 15 monitoreos
+y 150 lecturas de ejemplo).
+
+> Si el volumen `postgres_data` ya existe (arranques posteriores), el script no se
+> vuelve a ejecutar. Para resetear los datos: `docker compose down -v` y luego
+> `docker compose up --build`.
 
 ### Comandos útiles — Docker
 
