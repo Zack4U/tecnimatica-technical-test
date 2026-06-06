@@ -3,6 +3,13 @@
 Plataforma web para gestionar sensores y zonas de una planta industrial, con visualización
 en tiempo real sobre un plano 2D interactivo de la fábrica.
 
+- **Visibilidad inmediata** — plano de planta interactivo con zoom, pan y posicionamiento automático de sensores sobre sus zonas asignadas.
+- **Alertas en tiempo real** — detección visual instantánea cuando el valor de un sensor supera su umbral configurado.
+- **Simulador integrado** — genera lecturas con distintos modos (aleatorio, incremental, decremental, pico) para probar el sistema sin hardware físico.
+- **Historial de lecturas** — gráfico por monitoreo con las últimas N lecturas para analizar tendencias.
+- **Gestión completa** — alta de sensores, asignación a zonas, configuración de umbrales y pausa/reanudación de monitoreos desde la propia interfaz.
+- **Despliegue en un comando** — `docker compose up --build` levanta base de datos, backend y frontend con datos de prueba precargados.
+
 ## Stack
 
 | Capa | Tecnología |
