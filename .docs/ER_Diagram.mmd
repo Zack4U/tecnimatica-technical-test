@@ -22,9 +22,16 @@ erDiagram
     date installation_date
     enum reading_type
     numeric threshold_value
-    numeric current_value
+    numeric current_value "nullable"
     enum status
     timestamp created_at
   }
+  READINGS {
+    uuid id PK
+    uuid monitoring_id FK
+    numeric value
+    timestamp recorded_at
+  }
   SENSORS ||--o{ MONITORINGS : "monitorea"
   ZONES ||--o{ MONITORINGS : "es monitoreada por"
+  MONITORINGS ||--o{ READINGS : "registra"
