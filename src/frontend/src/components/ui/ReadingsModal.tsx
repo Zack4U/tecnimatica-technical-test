@@ -49,6 +49,7 @@ type Props = {
   sensor:         SensorResponse;
   availableZones: ZoneResponse[];
   selectedZoneId: string;
+  latestReadings: Record<string, Reading>;
   onZoneChange:   (zoneId: string) => void;
   onClose:        () => void;
 };
@@ -59,6 +60,7 @@ export function ReadingsModal({
   sensor,
   availableZones,
   selectedZoneId,
+  latestReadings,
   onZoneChange,
   onClose,
 }: Props) {
@@ -79,6 +81,7 @@ export function ReadingsModal({
       sensor={sensor}
       availableZones={availableZones}
       selectedZoneId={selectedZoneId}
+      latestReadings={latestReadings}
       onZoneChange={onZoneChange}
     />
   );
@@ -184,6 +187,7 @@ type ContentProps = {
   sensor:         SensorResponse;
   availableZones: ZoneResponse[];
   selectedZoneId: string;
+  latestReadings: Record<string, Reading>;
   onZoneChange:   (zoneId: string) => void;
 };
 
@@ -193,11 +197,14 @@ function ModalContent({
   sensor,
   availableZones,
   selectedZoneId,
+  latestReadings,
   onZoneChange,
 }: ContentProps) {
-  const [readings, setReadings] = useState<Reading[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
+  const [readings,  setReadings] = useState<Reading[]>([]);
+  const [loading,   setLoading]  = useState(true);
+  const [error,     setError]    = useState<string | null>(null);
+  // Marca para indicar que llegó una lectura nueva en tiempo real
+  const [liveFlash, setLiveFlash] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -213,6 +220,23 @@ function ModalContent({
   }, [monitoringId]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Actualizaciones en tiempo real: cuando el simulador produce una lectura nueva la añade localmente
+  useEffect(() => {
+    if (loading) return;
+    const incoming = latestReadings[monitoringId];
+    if (!incoming) return;
+    setReadings((prev) => {
+      // Ignorar si ya está en la lista
+      if (prev.some((r) => r.id === incoming.id)) return prev;
+      // Mantener orden ASC y límite de 20
+      return [...prev, incoming].slice(-20);
+    });
+    // Destello de actualización
+    setLiveFlash(true);
+    const t = setTimeout(() => setLiveFlash(false), 600);
+    return () => clearTimeout(t);
+  }, [latestReadings, monitoringId, loading]);
 
   const sensorColor = SENSOR_COLOR[sensor.type] ?? 'var(--accent)';
   const unit        = SENSOR_UNITS[sensor.type] ?? '';
@@ -261,8 +285,25 @@ function ModalContent({
 
       {/* Chart */}
       <div>
-        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-          Últimas {readings.length} lecturas
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Últimas {readings.length} lecturas
+          </span>
+          {/* Indicador de recepción en tiempo real */}
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            opacity: liveFlash ? 1 : 0,
+            transition: 'opacity 0.3s',
+          }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              backgroundColor: 'var(--sensor-vib)',
+              animation: 'sim-pulse 0.8s ease-in-out infinite',
+            }} />
+            <span style={{ fontSize: '0.6rem', color: 'var(--sensor-vib)', fontWeight: 700 }}>
+              LIVE
+            </span>
+          </span>
         </div>
 
         {loading ? (
@@ -314,6 +355,9 @@ function ModalContent({
                 fill="url(#readingGrad)"
                 dot={false}
                 activeDot={{ r: 4, fill: sensorColor }}
+                isAnimationActive={true}
+                animationDuration={400}
+                animationEasing="ease-out"
               />
             </AreaChart>
           </ResponsiveContainer>
@@ -373,7 +417,11 @@ function ModalContent({
       <style>{`
         @keyframes skeleton-pulse {
           0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
+          50%       { opacity: 0.5; }
+        }
+        @keyframes sim-pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.3; }
         }
       `}</style>
     </div>

@@ -329,6 +329,7 @@ export function FactoryPage() {
               sensor={histSensor}
               availableZones={availableZones}
               selectedZoneId={selectedZoneId}
+              latestReadings={factory.latestReadings}
               onZoneChange={(zoneId) => {
                 const m = factory.monitorings.find(
                   (mon) => mon.sensor.id === histSensor.id && mon.zone.id === zoneId

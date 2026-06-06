@@ -9,44 +9,82 @@ export type LastBatch = {
   timestamp: Date;
 };
 
+// Tendencia de la generación de valores
+export type TrendMode = 'random' | 'incremental' | 'decremental' | 'spike';
+
+export const TREND_LABELS: Record<TrendMode, string> = {
+  random:      'Aleatorio',
+  incremental: 'Incremental',
+  decremental: 'Decremental',
+  spike:       'Pico',
+};
+
 export type SimulatorState = {
-  isRunning: boolean;
-  intervalSeconds: number;
-  lastBatch: LastBatch | null;
-  error: string | null;
-  start: () => void;
-  pause: () => void;
+  isRunning:        boolean;
+  intervalSeconds:  number;
+  mode:             TrendMode;
+  minStep:          number;   // % mínimo de variación por tick (1–49)
+  maxStep:          number;   // % máximo de variación por tick (2–50)
+  lastBatch:        LastBatch | null;
+  error:            string | null;
+  start:            () => void;
+  pause:            () => void;
   setIntervalSeconds: (n: number) => void;
-  runOnce: () => void;
+  setMode:          (m: TrendMode) => void;
+  setMinStep:       (n: number) => void;
+  setMaxStep:       (n: number) => void;
+  runOnce:          () => void;
 };
 
 type SimulatorOptions = {
-  monitorings: MonitoringResponse[];
-  latestReadings: Record<string, Reading>;
+  monitorings:     MonitoringResponse[];
+  latestReadings:  Record<string, Reading>;
   onBatchComplete: (newReadings: Record<string, Reading>) => void;
   onAlert: (
     monitoringId: string,
-    value: number,
-    threshold: number,
-    sensorName: string,
-    zoneName: string
+    value:         number,
+    threshold:     number,
+    sensorName:    string,
+    zoneName:      string
   ) => void;
 };
 
 function generateValue(
-  monitoring: MonitoringResponse,
-  latestReading: Reading | undefined
+  monitoring:    MonitoringResponse,
+  latestReading: Reading | undefined,
+  mode:          TrendMode,
+  minStep:       number,
+  maxStep:       number
 ): number {
-  // 5% de probabilidad de generar un spike sobre el umbral
-  if (Math.random() < 0.05) {
-    return Number(
-      (monitoring.threshold_value * (1.05 + Math.random() * 0.2)).toFixed(2)
-    );
-  }
   const base = latestReading?.value ?? monitoring.threshold_value * 0.7;
-  const variation = base * 0.08;
-  const delta = (Math.random() - 0.5) * 2 * variation;
-  return Number(Math.max(0, base + delta).toFixed(2));
+  // Rango de variación en unidades absolutas según los % configurados
+  const lo = base * (minStep / 100);
+  const hi = base * (maxStep / 100);
+  const step = lo + Math.random() * (hi - lo);
+
+  switch (mode) {
+    case 'spike':
+      // Siempre supera el umbral en un 5–30 %
+      return Number(
+        (monitoring.threshold_value * (1.05 + Math.random() * 0.25)).toFixed(2)
+      );
+
+    case 'incremental': {
+      // Sube entre minStep% y maxStep%; limitado en threshold * 2 para evitar crecimiento infinito
+      const next = base + step;
+      return Number(Math.min(next, monitoring.threshold_value * 2).toFixed(2));
+    }
+
+    case 'decremental':
+      // Baja entre minStep% y maxStep%; nunca negativo
+      return Number(Math.max(0, base - step).toFixed(2));
+
+    case 'random':
+    default: {
+      const delta = (Math.random() - 0.5) * 2 * hi;
+      return Number(Math.max(0, base + delta).toFixed(2));
+    }
+  }
 }
 
 export function useSimulator({
@@ -55,16 +93,23 @@ export function useSimulator({
   onBatchComplete,
   onAlert,
 }: SimulatorOptions): SimulatorState {
-  const [isRunning, setIsRunning] = useState(false);
-  const [intervalSeconds, setIntervalSecondsState] = useState(3);
-  const [lastBatch, setLastBatch] = useState<LastBatch | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [isRunning,        setIsRunning]        = useState(false);
+  const [intervalSeconds,  setIntervalState]    = useState(3);
+  const [mode,             setModeState]        = useState<TrendMode>('random');
+  const [minStep,          setMinStepState]     = useState(1);
+  const [maxStep,          setMaxStepState]     = useState(8);
+  const [lastBatch,        setLastBatch]        = useState<LastBatch | null>(null);
+  const [error,            setError]            = useState<string | null>(null);
 
+  // Refs para acceso estable dentro del setInterval
   const monitoringsRef     = useRef(monitorings);
   const latestReadingsRef  = useRef(latestReadings);
   const onBatchCompleteRef = useRef(onBatchComplete);
   const onAlertRef         = useRef(onAlert);
-  const intervalSecondsRef = useRef(intervalSeconds);
+  const intervalRef        = useRef(intervalSeconds);
+  const modeRef            = useRef(mode);
+  const minStepRef         = useRef(minStep);
+  const maxStepRef         = useRef(maxStep);
   const timerRef           = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => { monitoringsRef.current     = monitorings;     }, [monitorings]);
@@ -78,84 +123,88 @@ export function useSimulator({
 
     const payload = active.map((m) => ({
       monitoring_id: m.id,
-      value: generateValue(m, latestReadingsRef.current[m.id]),
+      value: generateValue(
+        m,
+        latestReadingsRef.current[m.id],
+        modeRef.current,
+        minStepRef.current,
+        maxStepRef.current
+      ),
     }));
 
     try {
       const result: BatchReadingsResponse = await postReadingsBatch({ readings: payload });
 
-      const newReadingsMap: Record<string, Reading> = {};
+      const newMap: Record<string, Reading> = {};
       for (const r of result.readings) {
-        newReadingsMap[r.monitoring_id] = r;
-
-        // Detecta si este sensor cruza el umbral por primera vez en este tick
+        newMap[r.monitoring_id] = r;
         const m = active.find((mon) => mon.id === r.monitoring_id);
         if (m) {
-          const prev = latestReadingsRef.current[r.monitoring_id];
+          const prev    = latestReadingsRef.current[r.monitoring_id];
           const wasOver = prev !== undefined && prev.value > m.threshold_value;
           if (!wasOver && r.value > m.threshold_value) {
-            onAlertRef.current(
-              r.monitoring_id,
-              r.value,
-              m.threshold_value,
-              m.sensor.name,
-              m.zone.name
-            );
+            onAlertRef.current(r.monitoring_id, r.value, m.threshold_value, m.sensor.name, m.zone.name);
           }
         }
       }
 
-      onBatchCompleteRef.current(newReadingsMap);
+      onBatchCompleteRef.current(newMap);
       setLastBatch({ created: result.created, skipped: result.skipped, timestamp: new Date() });
       setError(null);
     } catch (err) {
-      // No detener el simulador — reintenta en el siguiente tick
       setError(err instanceof Error ? err.message : 'Error al enviar lecturas');
     }
   }, []);
 
   const clearTimer = useCallback(() => {
-    if (timerRef.current !== null) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
+    if (timerRef.current !== null) { clearInterval(timerRef.current); timerRef.current = null; }
   }, []);
 
-  const start = useCallback(() => {
+  const restartTimer = useCallback(() => {
     clearTimer();
-    timerRef.current = setInterval(() => {
-      void executeBatch();
-    }, intervalSecondsRef.current * 1000);
-    setIsRunning(true);
+    timerRef.current = setInterval(() => { void executeBatch(); }, intervalRef.current * 1000);
   }, [clearTimer, executeBatch]);
+
+  const start = useCallback(() => {
+    restartTimer();
+    setIsRunning(true);
+  }, [restartTimer]);
 
   const pause = useCallback(() => {
     clearTimer();
     setIsRunning(false);
   }, [clearTimer]);
 
-  const setIntervalSeconds = useCallback(
-    (n: number) => {
-      setIntervalSecondsState(n);
-      intervalSecondsRef.current = n;
-      // Si estaba corriendo, reiniciar con la nueva velocidad
-      if (timerRef.current !== null) {
-        clearTimer();
-        timerRef.current = setInterval(() => {
-          void executeBatch();
-        }, n * 1000);
-      }
-    },
-    [clearTimer, executeBatch]
-  );
+  const setIntervalSeconds = useCallback((n: number) => {
+    setIntervalState(n);
+    intervalRef.current = n;
+    if (timerRef.current !== null) restartTimer();
+  }, [restartTimer]);
 
-  const runOnce = useCallback(() => {
-    void executeBatch();
-  }, [executeBatch]);
+  const setMode = useCallback((m: TrendMode) => {
+    setModeState(m);
+    modeRef.current = m;
+  }, []);
 
-  useEffect(() => {
-    return () => { clearTimer(); };
-  }, [clearTimer]);
+  const setMinStep = useCallback((n: number) => {
+    const clamped = Math.min(n, maxStepRef.current - 1);
+    setMinStepState(clamped);
+    minStepRef.current = clamped;
+  }, []);
 
-  return { isRunning, intervalSeconds, lastBatch, error, start, pause, setIntervalSeconds, runOnce };
+  const setMaxStep = useCallback((n: number) => {
+    const clamped = Math.max(n, minStepRef.current + 1);
+    setMaxStepState(clamped);
+    maxStepRef.current = clamped;
+  }, []);
+
+  const runOnce = useCallback(() => { void executeBatch(); }, [executeBatch]);
+
+  useEffect(() => () => { clearTimer(); }, [clearTimer]);
+
+  return {
+    isRunning, intervalSeconds, mode, minStep, maxStep,
+    lastBatch, error,
+    start, pause, setIntervalSeconds, setMode, setMinStep, setMaxStep, runOnce,
+  };
 }
