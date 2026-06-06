@@ -1,0 +1,14 @@
+node_modules
+dist
+drizzle
+
+# Variables de entorno: se pasan a través de docker-compose, nunca en imagen
+.env
+.env.*
+!.env.example
+
+*.log
+.git
+.gitignore
+README.md
+API_DOCS.md

@@ -15,69 +15,205 @@ en tiempo real sobre un plano 2D interactivo de la fábrica.
 
 ---
 
-## Prerrequisitos
+## Modos de ejecución
 
-- [Node.js](https://nodejs.org/) v18 o superior
-- [Docker](https://www.docker.com/) y Docker Compose v2
+- **[Docker](#-modo-docker-recomendado)** — un solo comando, sin instalar nada más que Docker.
+- **[Manual](#-modo-manual)** — Node.js y PostgreSQL en la máquina local.
 
 ---
 
-## Inicio rápido
+## 🐳 Modo Docker (recomendado)
+
+### Prerrequisitos
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (incluye Docker Compose v2)
+
+### Puesta en marcha
 
 ```bash
-# 1. Clonar el repositorio
-git clone https://github.com/<usuario>/<repo>.git
-cd <repo>
+# 1. Copiar y configurar variables de entorno
+cp .env.example .env
+```
 
-# 2. Levantar PostgreSQL
-docker compose up -d
+Abre `.env` y establece una contraseña segura para `POSTGRES_PASSWORD`.
+El resto de valores funciona tal cual para un entorno local.
 
-# 3. Aplicar schema y datos de prueba
-docker exec -i monitoring_db psql -U postgres -d monitoring_db < schema.sql
+```bash
+# 2. Construir imágenes y levantar todos los servicios
+docker compose up --build
+```
 
-# 4. Backend
-cd src/backend
-cp .env.example .env      # editar si es necesario
-npm install
-npm run dev               # http://localhost:3000
+Docker Compose levanta los tres servicios en orden:
+1. **postgres** — espera a estar listo (healthcheck)
+2. **backend** — aplica el schema automáticamente y arranca Fastify
+3. **frontend** — sirve la SPA compilada con nginx
 
-# 5. Frontend (nueva terminal)
-cd src/frontend
-cp .env.example .env      # editar si es necesario
-npm install
-npm run dev               # http://localhost:5173
+| Servicio | URL |
+|----------|-----|
+| Frontend | <http://localhost> |
+| API REST | <http://localhost:3000/api/v1> |
+| Swagger UI | <http://localhost:3000/docs> |
+
+> Los puertos son configurables en `.env` con `FRONTEND_PORT` y `BACKEND_PORT`.
+
+### Cargar datos de prueba (opcional)
+
+```bash
+docker compose exec postgres psql \
+  -U postgres -d monitoring_db \
+  -f /dev/stdin < schema.sql
+```
+
+### Comandos útiles — Docker
+
+```bash
+# Levantar en segundo plano
+docker compose up --build -d
+
+# Ver logs de todos los servicios
+docker compose logs -f
+
+# Ver logs de un servicio específico
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f postgres
+
+# Detener sin borrar datos
+docker compose stop
+
+# Detener y eliminar contenedores
+docker compose down
+
+# Detener, eliminar contenedores Y volúmenes (resetea la BD por completo)
+docker compose down -v
+
+# Reconstruir solo un servicio (tras cambios de código)
+docker compose up --build backend
+docker compose up --build frontend
+
+# Abrir una shell en el contenedor del backend
+docker compose exec backend sh
+
+# Conectarse a PostgreSQL dentro del contenedor
+docker compose exec postgres psql -U postgres -d monitoring_db
 ```
 
 ---
 
-## Variables de entorno
+## 🛠 Modo Manual
 
-### Backend (`src/backend/.env`)
+### Prerrequisitos
 
+- [Node.js](https://nodejs.org/) v18 o superior
+- [PostgreSQL 15](https://www.postgresql.org/download/) corriendo localmente
+
+### Puesta en marcha
+
+#### Base de datos
+
+```bash
+# Crear la base de datos (si no existe)
+psql -U postgres -c "CREATE DATABASE monitoring_db;"
+
+# Cargar schema y datos de prueba
+psql -U postgres -d monitoring_db -f schema.sql
+```
+
+#### Backend
+
+```bash
+cd src/backend
+
+# Configurar variables de entorno
+cp .env.example .env   # ajusta DATABASE_URL si tu PostgreSQL usa otro usuario/puerto
+
+# Instalar dependencias
+npm install
+
+# Arrancar en modo desarrollo (recarga automática)
+npm run dev
+```
+
+El backend quedará disponible en <http://localhost:3000>.
+
+#### Frontend
+
+En una terminal nueva:
+
+```bash
+cd src/frontend
+
+# Configurar variables de entorno
+cp .env.example .env   # VITE_API_URL=http://localhost:3000 por defecto
+
+# Instalar dependencias
+npm install
+
+# Arrancar en modo desarrollo (HMR)
+npm run dev
+```
+
+El frontend quedará disponible en <http://localhost:5173>.
+
+### Variables de entorno — Manual
+
+**`src/backend/.env`**
 ```env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/monitoring_db
 PORT=3000
 CORS_ORIGIN=http://localhost:5173
 ```
 
-### Frontend (`src/frontend/.env`)
-
+**`src/frontend/.env`**
 ```env
 VITE_API_URL=http://localhost:3000
+```
+
+### Comandos útiles — Manual
+
+```bash
+# ── Backend ────────────────────────────────────────────────────────────────
+cd src/backend
+
+# Aplicar cambios de schema a la BD (Drizzle push)
+npm run db:push
+
+# Abrir Drizzle Studio (explorador visual de la BD)
+npm run db:studio
+
+# Compilar para producción
+npm run build
+
+# Ejecutar el build de producción
+npm start
+
+# ── Frontend ───────────────────────────────────────────────────────────────
+cd src/frontend
+
+# Build de producción
+npm run build
+
+# Previsualizar el build de producción localmente
+npm run preview
 ```
 
 ---
 
 ## Endpoints de la API
 
+Prefijo: `/api/v1`. Documentación interactiva en `/docs` (Swagger UI).
+
 | Método | Ruta | Descripción |
 |--------|------|-------------|
 | `GET` | `/sensors` | Listar todos los sensores |
 | `GET` | `/sensors/:id/zones` | Zonas monitoreadas por un sensor |
+| `GET` | `/zones` | Listar todas las zonas |
 | `GET` | `/zones/:id/sensors` | Sensores activos en una zona |
 | `POST` | `/monitorings` | Asignar un sensor a una zona |
 | `PATCH` | `/monitorings/:id` | Actualizar umbral o estado |
 | `GET` | `/monitorings?status=active\|paused` | Listar monitoreos con filtro opcional |
+| `GET` | `/readings/latest` | Última lectura de cada monitoreo activo |
+| `POST` | `/readings/batch` | Registrar lecturas de múltiples sensores |
 
 ---
 
@@ -85,57 +221,36 @@ VITE_API_URL=http://localhost:3000
 
 ```
 /
-├── schema.sql              # Schema completo + datos de prueba
-├── docker-compose.yml      # PostgreSQL
-├── DECISIONS.md            # Decisiones técnicas del proyecto
-├── .docs/
-│   └── rules/
-│       ├── AI_RULES.md
-│       ├── AI_RULES_DB.md
-│       ├── AI_RULES_BACKEND.md
-│       └── AI_RULES_FRONTEND.md
+├── docker-compose.yml          # Orquestación Docker (postgres + backend + frontend)
+├── .env.example                # Plantilla de variables para Docker
+├── schema.sql                  # Schema SQL + datos de prueba
+├── DECISIONS.md                # Decisiones técnicas del proyecto
 └── src/
     ├── backend/
-    │   ├── src/
-    │   │   ├── config/     # Validación de variables de entorno
-    │   │   ├── db/         # Conexión Drizzle + schema
-    │   │   ├── errors/     # Clases de error personalizadas
-    │   │   ├── types/      # Interfaces y DTOs
-    │   │   ├── repositories/
-    │   │   ├── services/
-    │   │   └── routes/
+    │   ├── Dockerfile
+    │   ├── docker-entrypoint.sh  # Aplica schema y arranca el servidor
     │   ├── .env.example
-    │   └── package.json
+    │   ├── drizzle.config.ts
+    │   └── src/
+    │       ├── config/           # Validación de variables de entorno (Zod)
+    │       ├── db/               # Conexión Drizzle + schema
+    │       ├── errors/           # Clases de error personalizadas
+    │       ├── types/            # Interfaces y DTOs por entidad
+    │       ├── repositories/     # Queries Drizzle (acceso a datos)
+    │       ├── services/         # Lógica de negocio y validaciones de dominio
+    │       └── routes/           # Rutas Fastify + schemas Zod
     └── frontend/
-        ├── src/
-        │   ├── components/
-        │   │   ├── factory/  # Canvas SVG, zonas, sensores
-        │   │   └── panel/    # Panel lateral, filtros, formulario
-        │   ├── hooks/
-        │   ├── pages/
-        │   ├── services/     # Capa de llamadas HTTP
-        │   └── types/
+        ├── Dockerfile
+        ├── nginx.conf            # SPA fallback + gzip + cache headers
         ├── .env.example
-        └── package.json
-```
-
----
-
-## Comandos útiles
-
-```bash
-# Ver logs de la base de datos
-docker compose logs -f db
-
-# Detener contenedores
-docker compose down
-
-# Detener y borrar volúmenes (resetea la BD)
-docker compose down -v
-
-# Backend — compilar para producción
-cd src/backend && npm run build
-
-# Frontend — build para producción
-cd src/frontend && npm run build
+        └── src/
+            ├── components/
+            │   ├── factory/      # Canvas SVG: zonas, sensores, anillos de selección
+            │   ├── panel/        # Panel lateral: detalle, filtros, acciones
+            │   └── ui/           # Componentes reutilizables: formularios, modales, toasts
+            ├── hooks/            # Estado del canvas, simulador, media queries
+            ├── pages/            # FactoryPage (única vista)
+            ├── services/         # Capa de llamadas HTTP centralizada
+            ├── types/            # Tipos TypeScript por entidad
+            └── utils/            # Utilidades: formato de tiempo, etc.
 ```

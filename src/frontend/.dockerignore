@@ -1,0 +1,12 @@
+node_modules
+dist
+
+# Variables de entorno: se pasan como build args, nunca en imagen
+.env
+.env.*
+!.env.example
+
+*.log
+.git
+.gitignore
+README.md
