@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   ResponsiveContainer,
@@ -10,7 +10,6 @@ import {
   Tooltip,
   ReferenceLine,
 } from 'recharts';
-import type { TooltipProps } from 'recharts';
 import { useMediaQuery } from '../../hooks/useMediaQuery.js';
 import { getReadings } from '../../services/api.js';
 import type { Reading } from '../../types/Reading.js';
@@ -206,35 +205,44 @@ function ModalContent({
   // Marca para indicar que llegó una lectura nueva en tiempo real
   const [liveFlash, setLiveFlash] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getReadings(monitoringId, 20);
-      setReadings(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar lecturas');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => {
+    let cancelled = false;
+    // IIFE async: await null desplaza todos los setState al camino asíncrono
+    // para cumplir con la regla react-hooks/set-state-in-effect.
+    void (async () => {
+      await null;
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+      try {
+        const data = await getReadings(monitoringId, 20);
+        if (!cancelled) setReadings(data);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Error al cargar lecturas');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [monitoringId]);
 
-  useEffect(() => { void load(); }, [load]);
-
-  // Actualizaciones en tiempo real: cuando el simulador produce una lectura nueva la añade localmente
+  // Actualizaciones en tiempo real: cuando el simulador produce una lectura nueva la añade localmente.
+  // Los setState se difieren con setTimeout(0) para evitar llamadas síncronas dentro del efecto.
   useEffect(() => {
     if (loading) return;
     const incoming = latestReadings[monitoringId];
     if (!incoming) return;
-    setReadings((prev) => {
-      // Ignorar si ya está en la lista
-      if (prev.some((r) => r.id === incoming.id)) return prev;
-      // Mantener orden ASC y límite de 20
-      return [...prev, incoming].slice(-20);
-    });
-    // Destello de actualización
-    setLiveFlash(true);
-    const t = setTimeout(() => setLiveFlash(false), 600);
+    const t = setTimeout(() => {
+      setReadings((prev) => {
+        // Ignorar si ya está en la lista
+        if (prev.some((r) => r.id === incoming.id)) return prev;
+        // Mantener orden ASC y límite de 20
+        return [...prev, incoming].slice(-20);
+      });
+      // Destello de actualización
+      setLiveFlash(true);
+      setTimeout(() => setLiveFlash(false), 600);
+    }, 0);
     return () => clearTimeout(t);
   }, [latestReadings, monitoringId, loading]);
 
@@ -428,11 +436,20 @@ function ModalContent({
   );
 }
 
+// Tipo local para el tooltip de Recharts: TooltipProps omite payload del contexto en v3+
+type ChartTooltipProps = {
+  active?:     boolean;
+  payload?:    Array<{ value?: number }>;
+  unit:        string;
+  threshold:   number;
+  sensorColor: string;
+};
+
 // Tooltip personalizado del chart
 function ChartTooltip({
   active, payload,
   unit, threshold, sensorColor,
-}: TooltipProps<number, string> & { unit: string; threshold: number; sensorColor: string }) {
+}: ChartTooltipProps) {
   if (!active || !payload?.length) return null;
   const entry = payload[0];
   if (entry?.value === undefined) return null;

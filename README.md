@@ -50,7 +50,7 @@ Docker Compose levanta los tres servicios en orden:
 
 | Servicio | URL |
 |----------|-----|
-| Frontend | <http://localhost> |
+| Frontend | <http://localhost:5173> |
 | API REST | <http://localhost:3000/api/v1> |
 | Swagger UI | <http://localhost:3000/docs> |
 

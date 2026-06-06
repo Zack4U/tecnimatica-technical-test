@@ -4,30 +4,32 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB:       ${POSTGRES_DB:-monitoring_db}
-      POSTGRES_USER:     ${POSTGRES_USER:-postgres}
-      # Obligatoria: docker-compose falla con mensaje claro si no está definida
+      POSTGRES_DB: ${POSTGRES_DB:-monitoring_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en el archivo .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-monitoring_db}"]
-      interval:     10s
-      timeout:       5s
-      retries:       5
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-monitoring_db}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
       start_period: 20s
 
   # ── Backend (Fastify + Drizzle) ───────────────────────────────────────────
   backend:
     build:
-      context:    ./src/backend
+      context: ./src/backend
       dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-monitoring_db}"
-      PORT:         3000
-      # Debe coincidir con la URL desde la que el navegador carga el frontend
-      CORS_ORIGIN:  ${FRONTEND_ORIGIN:-http://localhost}
+      PORT: 3000
+      CORS_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost}
     ports:
       - "${BACKEND_PORT:-3000}:3000"
     depends_on:
@@ -37,10 +39,9 @@ services:
   # ── Frontend (Vite → nginx) ───────────────────────────────────────────────
   frontend:
     build:
-      context:    ./src/frontend
+      context: ./src/frontend
       dockerfile: Dockerfile
       args:
-        # Vite incrusta esta URL en el bundle en tiempo de compilación
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
     restart: unless-stopped
     ports:

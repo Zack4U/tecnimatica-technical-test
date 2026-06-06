@@ -15,17 +15,18 @@ const TREND_ACCENT: Record<TrendMode, string> = {
 };
 
 function BatchStatus({ lastBatch }: { lastBatch: LastBatch }) {
-  const [label, setLabel] = useState(() => timeAgo(lastBatch.timestamp));
+  // Tick que fuerza un re-render cada segundo; el valor se computa en render
+  // para evitar setState síncrono dentro del efecto.
+  const [, setTick] = useState(0);
   useEffect(() => {
-    setLabel(timeAgo(lastBatch.timestamp));
-    const id = setInterval(() => setLabel(timeAgo(lastBatch.timestamp)), 1000);
+    const id = setInterval(() => setTick((n) => n + 1), 1_000);
     return () => clearInterval(id);
-  }, [lastBatch]);
+  }, []);
 
   const hasSkipped = lastBatch.skipped > 0;
   return (
     <span style={{ fontSize: '0.65rem', color: hasSkipped ? '#D97706' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-      {label} · {lastBatch.created} creadas{hasSkipped ? ` · ${lastBatch.skipped} omitidas` : ''}
+      {timeAgo(lastBatch.timestamp)} · {lastBatch.created} creadas{hasSkipped ? ` · ${lastBatch.skipped} omitidas` : ''}
     </span>
   );
 }

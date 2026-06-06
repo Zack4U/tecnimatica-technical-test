@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // useEffect para cargar sensores/zonas en modo create
+import { useState, useEffect } from 'react';
 import type { MonitoringResponse, ReadingType, MonitoringStatus } from '../../types/Monitoring.js';
 import type { SensorResponse } from '../../types/Sensor.js';
 import type { ZoneResponse } from '../../types/Zone.js';
@@ -86,13 +86,6 @@ export function MonitoringForm({
       });
   }, [mode, preselectedSensorId]);
 
-  // Auto-rellena el tipo de medición cuando el usuario elige un sensor
-  useEffect(() => {
-    if (mode !== 'create' || !sensorId) return;
-    const sensor = sensors.find((s) => s.id === sensorId);
-    if (sensor) setReadingType(sensor.type as ReadingType);
-  }, [sensorId, sensors, mode]);
-
   function validate(): boolean {
     const errors: FieldErrors = {};
     if (mode === 'create') {
@@ -157,7 +150,13 @@ export function MonitoringForm({
               <select
                 id="f-sensor"
                 value={sensorId}
-                onChange={(e) => setSensorId(e.target.value)}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSensorId(id);
+                  // Auto-rellena el tipo de medición al elegir sensor (en lugar de useEffect)
+                  const found = sensors.find((s) => s.id === id);
+                  if (found) setReadingType(found.type as ReadingType);
+                }}
                 style={inputStyle}
               >
                 <option value="">Selecciona un sensor…</option>

@@ -552,21 +552,21 @@ function SensorDetail({
 }
 
 function LiveTimestamp({ recordedAt }: { recordedAt: string }) {
-  const [label, setLabel] = useState(() => timeAgo(recordedAt));
+  // Contador que fuerza un re-render cada 10 s para mantener el tiempo actualizado.
+  // El valor se computa directamente en render para reflejar cambios de prop de inmediato,
+  // sin necesidad de setState síncrono dentro del efecto.
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    // Recalcula inmediatamente al montar o cuando cambia la lectura
-    setLabel(timeAgo(recordedAt));
-    // Refresca cada 10 s para mantener el "Hace X tiempo" actualizado
-    const id = setInterval(() => setLabel(timeAgo(recordedAt)), 10_000);
+    const id = setInterval(() => setTick((n) => n + 1), 10_000);
     return () => clearInterval(id);
-  }, [recordedAt]);
+  }, []);
 
   return (
     <span
       style={{ color: "var(--text-muted)", fontSize: "0.6rem", marginLeft: 4 }}
     >
-      · {label}
+      · {timeAgo(recordedAt)}
     </span>
   );
 }
