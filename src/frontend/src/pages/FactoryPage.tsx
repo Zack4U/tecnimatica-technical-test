@@ -111,6 +111,25 @@ export function FactoryPage() {
     />
   );
 
+  // Conteo de sensores por estado — misma lógica que SensorMarker (umbral al 80%)
+  let normalCount = 0, dangerCount = 0, criticalCount = 0, pausedCount = 0;
+  for (const inst of factory.sensorInstances) {
+    const allPaused = inst.monitorings.every((m) => m.status === 'paused');
+    if (allPaused) { pausedCount++; continue; }
+    const active = inst.monitorings.filter((m) => m.status === 'active');
+    const isCritical = active.some((m) => {
+      const v = factory.latestReadings[m.id]?.value ?? m.current_value;
+      return v !== null && v !== undefined && v > m.threshold_value;
+    });
+    const isDanger = !isCritical && active.some((m) => {
+      const v = factory.latestReadings[m.id]?.value ?? m.current_value;
+      return v !== null && v !== undefined && m.threshold_value > 0 && v / m.threshold_value >= 0.8;
+    });
+    if (isCritical) criticalCount++;
+    else if (isDanger) dangerCount++;
+    else normalCount++;
+  }
+
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden',
@@ -119,10 +138,11 @@ export function FactoryPage() {
       {/* ── Topbar ── */}
       <header style={{
         height: 48, display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 16px', backgroundColor: 'var(--bg-panel)',
-        borderBottom: '1px solid var(--border-ui)', flexShrink: 0, zIndex: 20,
+        padding: '0 12px', backgroundColor: 'var(--bg-panel)',
+        borderBottom: '1px solid var(--border-ui)', flexShrink: 0, zIndex: 20, gap: 8,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Izquierda: logo + título */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)' }}>
             <rect x="1" y="4" width="14" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
             <path d="M5 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.5" />
@@ -132,7 +152,20 @@ export function FactoryPage() {
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        {/* Centro: badges de estado de sensores */}
+        {!factory.loading && factory.sensorInstances.length > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <StatusBadge count={normalCount}   label="Normal"    color="var(--sensor-vib)"   pulse={false} />
+            <StatusBadge count={dangerCount}   label="Peligro"   color="var(--sensor-temp)"  pulse={dangerCount > 0} />
+            <StatusBadge count={criticalCount} label="Crítico"   color="var(--sensor-alert)" pulse={criticalCount > 0} />
+            {pausedCount > 0 && (
+              <StatusBadge count={pausedCount} label="Pausado"   color="var(--sensor-paused)" pulse={false} />
+            )}
+          </div>
+        )}
+
+        {/* Derecha: controles */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
           {factory.error && (
             <span style={{ color: 'var(--sensor-alert)', fontSize: '0.7rem' }}>{factory.error}</span>
           )}
@@ -353,5 +386,38 @@ function TagIcon({ size = 12 }: { size?: number }) {
       <path d="M2 2h4l4 4-4 4-4-4V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
       <circle cx="4.5" cy="4.5" r="0.8" fill="currentColor" />
     </svg>
+  );
+}
+
+// Badge de estado en el topbar — punto + contador + etiqueta
+function StatusBadge({
+  count, label, color, pulse,
+}: { count: number; label: string; color: string; pulse: boolean }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 5,
+      padding: '3px 9px', borderRadius: 20,
+      border: '1px solid var(--border-ui)',
+      backgroundColor: 'var(--bg-surface)',
+      userSelect: 'none',
+    }}>
+      <span style={{
+        width: 7, height: 7, borderRadius: '50%',
+        backgroundColor: color, flexShrink: 0,
+        animation: pulse ? 'status-badge-pulse 1.8s ease-in-out infinite' : 'none',
+      }} />
+      <span style={{ fontSize: '0.75rem', fontWeight: 700, color, lineHeight: 1 }}>
+        {count}
+      </span>
+      <span style={{ fontSize: '0.65rem', fontWeight: 500, color: 'var(--text-muted)', lineHeight: 1 }}>
+        {label}
+      </span>
+      <style>{`
+        @keyframes status-badge-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50%       { opacity: 0.5; transform: scale(0.85); }
+        }
+      `}</style>
+    </div>
   );
 }

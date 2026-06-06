@@ -43,10 +43,21 @@ export function SensorMarker({
 
   // Estado compuesto de todos los monitoreos de esta instancia
   const isPaused = monitorings.every((m) => m.status === 'paused');
+
   const isAlert = !isPaused && monitorings.some(
-    (m) => m.current_value !== null &&
+    (m) => m.status === 'active' &&
+           m.current_value !== null &&
            m.current_value !== undefined &&
            m.current_value > m.threshold_value
+  );
+
+  // Cerca del umbral: valor activo ≥ 80 % del umbral pero sin superarlo
+  const isNearThreshold = !isPaused && !isAlert && monitorings.some(
+    (m) => m.status === 'active' &&
+           m.current_value !== null &&
+           m.current_value !== undefined &&
+           m.threshold_value > 0 &&
+           m.current_value / m.threshold_value >= 0.8
   );
 
   const baseColor = isAlert
@@ -55,11 +66,10 @@ export function SensorMarker({
     ? 'var(--sensor-paused)'
     : TYPE_COLOR[sensor.type];
 
-  // Solo emite pulso si está en ALERTA (rojo) o es TEMPERATURA (naranja)
-  const shouldPulse = !isPaused && (isAlert || sensor.type === 'temperature');
-  const pulseClass = shouldPulse
-    ? isAlert ? 'sensor-ring-fast' : 'sensor-ring'
-    : '';
+  // Naranja para "cerca del umbral", rojo para "superado"
+  const ringColor  = isAlert ? 'var(--sensor-alert)' : 'var(--sensor-temp)';
+  const shouldPulse = !isPaused && (isAlert || isNearThreshold);
+  const pulseClass  = isAlert ? 'sensor-ring-fast' : 'sensor-ring';
 
   const code = `${TYPE_LABEL[sensor.type]}${index + 1}`;
 
@@ -74,14 +84,14 @@ export function SensorMarker({
     >
       <title>{sensor.name}</title>
 
-      {/* Anillo pulsante (solo alerta o temperatura) */}
+      {/* Anillo pulsante: naranja si cerca del umbral, rojo si superado */}
       {shouldPulse && (
         <circle
           cx={cx}
           cy={cy}
           r={14}
           fill="none"
-          stroke={baseColor}
+          stroke={ringColor}
           strokeWidth={1.5}
           className={pulseClass}
         />
