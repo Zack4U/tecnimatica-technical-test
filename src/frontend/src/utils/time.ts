@@ -1,22 +1,25 @@
 /**
- * Devuelve una cadena legible en español indicando cuánto tiempo pasó
- * desde la fecha indicada hasta ahora.
+ * Devuelve cuánto tiempo pasó desde la fecha indicada hasta ahora, en español.
  *
- * Escala:
- *   < 60 s      → "Hace X segundos"
- *   < 60 min    → "Hace X minutos"
- *   < 24 h      → "Hace X horas"
- *   < 7 días    → "Hace X días"
- *   < 4 semanas → "Hace X semanas"
- *   < 12 meses  → "Hace X meses"
- *   ≥ 12 meses  → "DD/MM/AAAA"
+ *   < 1 min   → "Hace X segundos"  (mínimo "Hace 1 segundo")
+ *   < 1 h     → "Hace X minutos"
+ *   < 24 h    → "Hace X horas"
+ *   < 7 días  → "Hace X días"
+ *   < 4 sem   → "Hace X semanas"
+ *   < 12 mes  → "Hace X meses"
+ *   ≥ 12 mes  → "DD/MM/AAAA"
+ *
+ * Los timestamps ligeramente futuros (desfase de reloj) se tratan como 1 segundo.
  */
 export function timeAgo(date: Date | string): string {
   const then = typeof date === 'string' ? new Date(date).getTime() : date.getTime();
-  const diffSecs = Math.floor((Date.now() - then) / 1000);
+
+  // Clampeamos a mínimo 1 para que timestamps "del futuro" (desfase de reloj
+  // entre servidor y cliente) muestren "Hace 1 segundo" en vez de valores raros.
+  const diffSecs = Math.max(1, Math.round((Date.now() - then) / 1000));
 
   if (diffSecs < 60) {
-    return diffSecs <= 1 ? 'Hace 1 segundo' : `Hace ${diffSecs} segundos`;
+    return diffSecs === 1 ? 'Hace 1 segundo' : `Hace ${diffSecs} segundos`;
   }
 
   const diffMins = Math.floor(diffSecs / 60);
@@ -44,10 +47,9 @@ export function timeAgo(date: Date | string): string {
     return diffMonths === 1 ? 'Hace 1 mes' : `Hace ${diffMonths} meses`;
   }
 
-  // Más de un año → fecha exacta
   const d = new Date(then);
-  const dd  = String(d.getDate()).padStart(2, '0');
-  const mm  = String(d.getMonth() + 1).padStart(2, '0');
+  const dd   = String(d.getDate()).padStart(2, '0');
+  const mm   = String(d.getMonth() + 1).padStart(2, '0');
   const aaaa = d.getFullYear();
   return `${dd}/${mm}/${aaaa}`;
 }

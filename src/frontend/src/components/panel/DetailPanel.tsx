@@ -376,9 +376,10 @@ function LiveTimestamp({ recordedAt }: { recordedAt: string }) {
   const [label, setLabel] = useState(() => timeAgo(recordedAt));
 
   useEffect(() => {
+    // Recalcula inmediatamente al montar o cuando cambia la lectura
     setLabel(timeAgo(recordedAt));
-    // Refresca cada 30 s — suficiente para "hace X minutos/horas/días"
-    const id = setInterval(() => setLabel(timeAgo(recordedAt)), 30_000);
+    // Refresca cada 10 s para mantener el "Hace X tiempo" actualizado
+    const id = setInterval(() => setLabel(timeAgo(recordedAt)), 10_000);
     return () => clearInterval(id);
   }, [recordedAt]);
 

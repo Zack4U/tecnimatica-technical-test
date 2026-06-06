@@ -185,15 +185,7 @@ export function MonitoringForm({
               </select>
             </Field>
 
-            <Field
-              label="Tipo de lectura"
-              error={fieldErrors['readingType']}
-              hint={
-                sensorId && sensors.find((s) => s.id === sensorId)?.type === readingType
-                  ? 'Auto-completado según el sensor'
-                  : undefined
-              }
-            >
+            <Field label="Tipo de lectura" error={fieldErrors['readingType']}>
               <select
                 id="f-reading"
                 value={readingType}
@@ -324,31 +316,17 @@ function UnitInput({
 function Field({
   label,
   error,
-  hint,
   children,
 }: {
   label: string;
   error?: string;
-  hint?: string;
   children: React.ReactNode;
 }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
-          {label}
-        </label>
-        {hint && (
-          <span style={{
-            fontSize: '0.6rem', fontWeight: 600,
-            color: 'var(--sensor-vib)',
-            backgroundColor: 'rgba(26,138,90,0.1)',
-            padding: '1px 6px', borderRadius: 4,
-          }}>
-            ✓ {hint}
-          </span>
-        )}
-      </div>
+      <label style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-secondary)' }}>
+        {label}
+      </label>
       {children}
       {error && (
         <span style={{ color: 'var(--sensor-alert)', fontSize: '0.65rem' }}>
