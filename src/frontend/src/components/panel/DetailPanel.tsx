@@ -8,6 +8,7 @@ import type { Reading } from '../../types/Reading.js';
 import { Badge } from '../ui/Badge.js';
 import { updateMonitoring } from '../../services/api.js';
 import { MonitoringEditModal, MonitoringDeleteModal } from '../ui/MonitoringActionModal.js';
+import { timeAgo } from '../../utils/time.js';
 
 type ActionModal = 'edit' | 'delete' | null;
 
@@ -18,13 +19,6 @@ const SENSOR_UNITS: Record<string, string> = {
   flow:        ' L/min',
 };
 
-function timeAgo(dateStr: string): string {
-  const secs = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (secs < 60)  return `hace ${secs}s`;
-  const mins = Math.floor(secs / 60);
-  if (mins < 60)  return `hace ${mins}m`;
-  return new Date(dateStr).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
-}
 
 type Props = {
   selectedZone: ZoneResponse | null;
@@ -383,7 +377,8 @@ function LiveTimestamp({ recordedAt }: { recordedAt: string }) {
 
   useEffect(() => {
     setLabel(timeAgo(recordedAt));
-    const id = setInterval(() => setLabel(timeAgo(recordedAt)), 10_000);
+    // Refresca cada 30 s — suficiente para "hace X minutos/horas/días"
+    const id = setInterval(() => setLabel(timeAgo(recordedAt)), 30_000);
     return () => clearInterval(id);
   }, [recordedAt]);
 

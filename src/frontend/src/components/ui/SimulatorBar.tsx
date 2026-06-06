@@ -2,11 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SimulatorState, LastBatch, TrendMode } from '../../hooks/useSimulator.js';
 import { TREND_LABELS } from '../../hooks/useSimulator.js';
+import { timeAgo } from '../../utils/time.js';
 
 const SPEED_OPTIONS = [1, 3, 5, 10] as const;
 const TREND_MODES: TrendMode[] = ['random', 'incremental', 'decremental', 'spike'];
 
-// Colores de cada modo para el pill activo
 const TREND_ACCENT: Record<TrendMode, string> = {
   random:      'var(--accent)',
   incremental: 'var(--sensor-vib)',
@@ -14,15 +14,11 @@ const TREND_ACCENT: Record<TrendMode, string> = {
   spike:       'var(--sensor-alert)',
 };
 
-function timeAgoSecs(date: Date): string {
-  return `hace ${Math.floor((Date.now() - date.getTime()) / 1000)}s`;
-}
-
 function BatchStatus({ lastBatch }: { lastBatch: LastBatch }) {
-  const [label, setLabel] = useState(() => timeAgoSecs(lastBatch.timestamp));
+  const [label, setLabel] = useState(() => timeAgo(lastBatch.timestamp));
   useEffect(() => {
-    setLabel(timeAgoSecs(lastBatch.timestamp));
-    const id = setInterval(() => setLabel(timeAgoSecs(lastBatch.timestamp)), 1000);
+    setLabel(timeAgo(lastBatch.timestamp));
+    const id = setInterval(() => setLabel(timeAgo(lastBatch.timestamp)), 1000);
     return () => clearInterval(id);
   }, [lastBatch]);
 
