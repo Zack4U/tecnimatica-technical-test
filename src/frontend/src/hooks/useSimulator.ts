@@ -56,33 +56,47 @@ function generateValue(
   minStep:       number,
   maxStep:       number
 ): number {
-  const base = latestReading?.value ?? monitoring.threshold_value * 0.7;
-  // Rango de variación en unidades absolutas según los % configurados
-  const lo = base * (minStep / 100);
-  const hi = base * (maxStep / 100);
-  const step = lo + Math.random() * (hi - lo);
+  const base      = latestReading?.value ?? monitoring.threshold_value * 0.7;
+  const threshold = monitoring.threshold_value;
+
+  // El paso se calcula SIEMPRE sobre el umbral, no sobre el valor actual.
+  // Así, un valor cercano a 0 (ej. 0.01 de un umbral de 85) recibe pasos
+  // proporcionales al rango real del sensor, evitando quedar "pegado".
+  // Si el umbral fuera 0 o muy pequeño usamos 1 como mínimo de referencia.
+  const reference = Math.max(threshold, 1);
+  const lo        = reference * (minStep / 100);
+  const hi        = reference * (maxStep / 100);
+  const magnitude = lo + Math.random() * (hi - lo);
 
   switch (mode) {
     case 'spike':
       // Siempre supera el umbral en un 5–30 %
       return Number(
-        (monitoring.threshold_value * (1.05 + Math.random() * 0.25)).toFixed(2)
+        (threshold * (1.05 + Math.random() * 0.25)).toFixed(2)
       );
 
-    case 'incremental': {
-      // Sube entre minStep% y maxStep%; limitado en threshold * 2 para evitar crecimiento infinito
-      const next = base + step;
-      return Number(Math.min(next, monitoring.threshold_value * 2).toFixed(2));
-    }
+    case 'incremental':
+      // Sube; limitado en threshold * 2 para evitar crecimiento infinito
+      return Number(Math.min(base + magnitude, threshold * 2).toFixed(2));
 
     case 'decremental':
-      // Baja entre minStep% y maxStep%; nunca negativo
-      return Number(Math.max(0, base - step).toFixed(2));
+      // Baja; nunca negativo
+      return Number(Math.max(0, base - magnitude).toFixed(2));
 
     case 'random':
     default: {
-      const delta = (Math.random() - 0.5) * 2 * hi;
-      return Number(Math.max(0, base + delta).toFixed(2));
+      // Aleatorio con tendencia según posición relativa al umbral:
+      //   < 20 % → alta probabilidad de incremento (rescata al sensor del 0)
+      //   > 90 % → alta probabilidad de decremento (evita acumulación sobre umbral)
+      //   resto  → completamente aleatorio
+      const ratio = threshold > 0 ? base / threshold : 0.5;
+      const pUp =
+        ratio < 0.2 ? 0.85 :   // muy bajo  → tiende a subir
+        ratio > 0.9 ? 0.15 :   // muy alto  → tiende a bajar
+        0.5;                    // zona media → sin sesgo
+
+      const direction = Math.random() < pUp ? 1 : -1;
+      return Number(Math.max(0, base + direction * magnitude).toFixed(2));
     }
   }
 }

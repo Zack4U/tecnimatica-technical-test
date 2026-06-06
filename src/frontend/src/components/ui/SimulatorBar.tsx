@@ -188,7 +188,10 @@ export function SimulatorBar({
         {/* Rango de paso — oculto en modo Pico (siempre sobre umbral) */}
         {mode !== 'spike' && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600 }}>Paso:</span>
+            <span style={{ fontSize: '0.58rem', color: 'var(--text-muted)', fontWeight: 600 }}
+              title="Variación por tick expresada como % del umbral del sensor">
+              Paso (% umbral):
+            </span>
             <StepInput label="mín" value={minStep} min={1} max={maxStep - 1} onChange={setMinStep} />
             <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>—</span>
             <StepInput label="máx" value={maxStep} min={minStep + 1} max={50} onChange={setMaxStep} />
